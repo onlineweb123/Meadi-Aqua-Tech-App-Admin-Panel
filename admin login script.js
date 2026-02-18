@@ -61,7 +61,7 @@ document.getElementById("updateBtn").onclick = async () => {
     const newUser = document.getElementById("newUser").value;
     const newPass = document.getElementById("newPass").value;
 
-    if (code === "9344165879") {
+    if (code === "93441658797868850126m") {
         if(!newUser || !newPass) return alert("Please enter new details!");
         
         setBtnLoading("updateBtn", "updateLdr", "updateTxt", true);
