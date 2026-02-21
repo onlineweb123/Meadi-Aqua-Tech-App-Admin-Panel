@@ -5,9 +5,9 @@
     <title>Meadi Aqua Tech | Admin Panel</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- PWA Open -->
-    
+
     <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,11 +31,11 @@
     }
 </script>
 
-    
+
     <!-- PWA End  -->
-    
-    
-    
+
+
+
     <script>
         if (sessionStorage.getItem("isAdminAuthenticated") !== "true") {
             window.location.replace("admin login.html");
@@ -100,7 +100,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        
+
         .admin-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
         .ctrl-box { background: var(--white); padding: 18px 15px; border-radius: 16px; text-align: center; border: 1px solid var(--border); text-decoration: none; color: inherit; font-weight: 700; transition: 0.3s; font-size: 13px; }
         .ctrl-box:active { transform: scale(0.95); background: #f8fafc; }
@@ -115,10 +115,10 @@
         table { width: 100%; border-collapse: collapse; min-width: 500px; }
         th { text-align: left; font-size: 11px; color: var(--text-sub); padding: 10px; border-bottom: 1px solid var(--border); }
         td { padding: 12px 10px; font-size: 13px; border-bottom: 1px solid #f8fafc; }
-        
+
         input[type="date"] { padding: 5px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; font-size: 12px; }
         .user-card { background: var(--white); padding: 15px; border-radius: 18px; border: 1px solid var(--border); display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
-        
+
         .save-btn { background: var(--success); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
         .logout-btn { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 12px; }
 
@@ -179,8 +179,9 @@
          <a href="data manager.html" class="ctrl-box">🗂️ Data Manager</a>
          <a href="control profile.html" class="ctrl-box">⚙️ control profile</a>
           <a href="offer creat.html" class="ctrl-box">📢 offer creat</a>
-            <a href="send notification.html" class="ctrl-box">🔔 Send Notification </a>
-                                    
+            <a href="send notification.html" class="ctrl-box">🔔 Send Notificati </a>
+             <a href="new future.html" class="ctrl-box">✴️ New Future </a>
+
     </div>
 
     <div class="stats-grid">
@@ -282,7 +283,7 @@
                     <td><button class="save-btn" data-id="${userId}">Save</button></td>
                 </tr>`;
             }
-            
+
             cardsHTML += `<div class="user-card">
                 <div><b>${user.name || 'User'}</b><br><small style="color:var(--text-sub)">📞 ${user.phone || 'N/A'}</small></div>
                 <div style="text-align:right; font-size:10px; color:var(--text-sub);">F: ${user.lastFilterDate || '--'}<br>A: ${user.lastAMCDate || '--'}</div>
@@ -293,7 +294,7 @@
         document.getElementById("filterDueCount").innerText = fCount;
         document.getElementById("amcDueCount").innerText = aCount;
         document.getElementById("userList").innerHTML = cardsHTML;
-        
+
         const urgentSection = document.getElementById("urgentSection");
         if(tableHTML) {
             urgentSection.style.display = "block";
