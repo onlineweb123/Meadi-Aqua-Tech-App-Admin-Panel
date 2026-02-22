@@ -15,7 +15,7 @@
 
         /* Search Button & Small Spinner Styles */
         .search-box { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
-        
+
         .search-btn {
             background: var(--primary); color: white; border: none;
             padding: 12px 20px; border-radius: 12px; font-weight: 700;
@@ -112,6 +112,7 @@
     <button onclick="location.href='profile.html'"><span class="icon">👤</span>Profile</button>
 </div>
 
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, get, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -125,7 +126,19 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const user = localStorage.getItem("aquaUser") || "Guest";
+
+    // ✅ தற்போதைய அட்மின் பெயரைப் பெற உதவும் Function
+    async function getActiveAdmin() {
+        try {
+            const adminSnap = await get(ref(db, 'admin'));
+            if (adminSnap.exists()) {
+                const name = adminSnap.val().user;
+                localStorage.setItem("aquaUser", name);
+                return name;
+            }
+        } catch (e) { console.error("Admin Fetch Error:", e); }
+        return localStorage.getItem("aquaUser") || "Guest";
+    }
 
     // Sidebar Logic
     const toggleMenu = () => {
@@ -149,7 +162,7 @@
 
     async function loadFilteredData() {
         const selectedDate = new Date(filterInput.value).toLocaleDateString('en-GB'); 
-        
+
         // UI Loading State
         searchBtn.disabled = true;
         btnSpinner.style.display = "block";
@@ -157,13 +170,19 @@
         listDiv.innerHTML = `<p style="text-align:center; padding: 40px; color: var(--text-sub);">Loading records...</p>`;
 
         try {
-            const snapshot = await get(ref(db, `users/${user}/transactions`));
+            // ✅ அட்மின் பெயரை Firebase-லிருந்து எடுத்துத் தேடுகிறோம்
+            const currentAdmin = await getActiveAdmin();
+            const snapshot = await get(ref(db, `users/${currentAdmin}/transactions`));
+            
             listDiv.innerHTML = "";
             let count = 0;
 
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                Object.entries(data).forEach(([key, item]) => {
+                // லேட்டஸ்ட் டேட்டா முதலில் வர sortedEntries பயன்படுத்துகிறோம்
+                const sortedEntries = Object.entries(data).sort((a, b) => (b[1].timestamp || 0) - (a[1].timestamp || 0));
+
+                sortedEntries.forEach(([key, item]) => {
                     if (item.date && item.date.includes(selectedDate)) {
                         count++;
                         const isInc = item.type === 'income';
@@ -191,21 +210,27 @@
             console.error(error);
             alert("Error loading data.");
         } finally {
-            // Reset Button State
             searchBtn.disabled = false;
             btnSpinner.style.display = "none";
             btnText.innerText = "Search";
         }
     }
 
+    // DELETE FUNCTION
     window.deleteRecord = async (id) => {
         if (confirm("நிச்சயமாக இந்தப் பதிவை நீக்க வேண்டுமா?")) {
-            await remove(ref(db, `users/${user}/transactions/${id}`));
-            alert("பதிவு நீக்கப்பட்டது!");
-            loadFilteredData(); // Refresh list after delete
+            try {
+                const currentAdmin = await getActiveAdmin();
+                await remove(ref(db, `users/${currentAdmin}/transactions/${id}`));
+                alert("பதிவு நீக்கப்பட்டது!");
+                loadFilteredData(); 
+            } catch (e) {
+                alert("Delete failed!");
+            }
         }
     };
 </script>
+
 
 </body>
 </html>
