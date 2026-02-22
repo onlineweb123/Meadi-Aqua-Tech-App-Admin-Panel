@@ -33,23 +33,35 @@ function setBtnLoading(btnId, ldrId, txtId, isLoading, defaultText) {
 
 // Login Process
 document.getElementById("loginBtn").onclick = async () => {
-    const u = document.getElementById("loginUser").value;
-    const p = document.getElementById("loginPass").value;
+    const u = document.getElementById("loginUser").value.trim();
+    const p = document.getElementById("loginPass").value.trim();
     if(!u || !p) return alert("Please enter both Username and Password!");
 
     setBtnLoading("loginBtn", "loginLdr", "loginTxt", true);
     try {
         const snapshot = await get(ref(db, 'admin'));
-        if (snapshot.exists() && u === snapshot.val().user && p === snapshot.val().pass) {
+        if (snapshot.exists()) {
+            const adminData = snapshot.val();
             
-            // ✅ இந்த வரிதான் மிக முக்கியம்: ஒருமுறை லாகின் செய்ததை உறுதிப்படுத்துகிறது
-            sessionStorage.setItem("isAdminAuthenticated", "true"); 
-            
-            window.location.href = "admin.html"; 
+            // டேட்டாபேஸில் உள்ள தரவுகளுடன் ஒப்பிடுதல்
+            if (u === adminData.user && p === adminData.pass) {
+                
+                // ✅ முக்கியமான மாற்றம்: 
+                // லாகின் செய்த அட்மின் பெயரை 'aquaUser' என சேமிக்கிறோம். 
+                // இதுதான் மற்ற பக்கங்களில் 'Mathavan' என்ற நோடைத் திறக்க உதவும்.
+                localStorage.setItem("aquaUser", adminData.user); 
+                
+                sessionStorage.setItem("isAdminAuthenticated", "true"); 
+
+                window.location.href = "admin.html"; 
+            } else {
+                alert("Invalid Username or Password!");
+            }
         } else {
-            alert("Invalid Username or Password!");
+            alert("Admin node not found in database!");
         }
     } catch (e) { 
+        console.error(e);
         alert("Database Error! Check connection."); 
     }
     setBtnLoading("loginBtn", "loginLdr", "loginTxt", false, "Login");
@@ -57,17 +69,17 @@ document.getElementById("loginBtn").onclick = async () => {
 
 // Security Code Reset Process
 document.getElementById("updateBtn").onclick = async () => {
-    const code = document.getElementById("securityPhone").value;
-    const newUser = document.getElementById("newUser").value;
-    const newPass = document.getElementById("newPass").value;
+    const code = document.getElementById("securityPhone").value.trim();
+    const newUser = document.getElementById("newUser").value.trim();
+    const newPass = document.getElementById("newPass").value.trim();
 
     if (code === "93441658797868850126m") {
         if(!newUser || !newPass) return alert("Please enter new details!");
-        
+
         setBtnLoading("updateBtn", "updateLdr", "updateTxt", true);
         try {
             await update(ref(db, 'admin'), { user: newUser, pass: newPass });
-            alert("Credentials updated! Please login.");
+            alert("Credentials updated! Please login with new username.");
             location.reload();
         } catch (e) { 
             alert("Update failed!"); 
@@ -88,4 +100,3 @@ document.getElementById("btnHideSettings").onclick = () => {
     document.getElementById("settingsPage").style.display = "none";
     document.getElementById("loginOverlay").style.display = "flex";
 };
-
