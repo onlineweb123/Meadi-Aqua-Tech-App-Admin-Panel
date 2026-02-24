@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Records - Meadi Aqua</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; margin-bottom: 20px; }
+        
+        .tab-group { display: flex; width: 100%; margin-bottom: 20px; background: #ddd; border-radius: 8px; padding: 5px; box-sizing: border-box;}
+        .tab-btn { flex: 1; border: none; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; background: transparent; transition: 0.3s; }
+        .tab-btn.active { background: white; color: #1a73e8; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; outline: none; }
+        input:focus { border-color: #1a73e8; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        button.save-btn { 
+            flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; 
+            cursor: pointer; color: white; background: #28a745;
+            position: relative; min-height: 45px; display: flex; justify-content: center; align-items: center;
+        }
+        
+        /* Centered Spinner */
+        .spinner { 
+            animation: spin 1s linear infinite; 
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -10px; /* Adjust based on icon size */
+            margin-top: -10px;
+        }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* List Styles */
+        .list-container { width: 100%; max-width: 450px; }
+        .item-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #1a73e8; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .item-info { flex-grow: 1; padding-right: 10px; }
+        .item-name { font-weight: bold; color: #333; display: block; font-size: 15px; }
+        .item-desc { font-size: 13px; color: #555; display: block; margin: 3px 0; }
+        .item-sub { font-size: 11px; color: #999; }
+        .delete-btn { background: #dc3545; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 35px; height: 35px; flex-shrink: 0; }
+        
+        #reminderSection { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="tab-group">
+        <button id="tabCust" class="tab-btn active" onclick="switchTab('customer')">Customer Data</button>
+        <button id="tabRem" class="tab-btn" onclick="switchTab('reminder')">Quick Reminder</button>
+    </div>
+
+    <div id="customerSection">
+        <input type="text" id="custName" placeholder="Customer Name">
+        <input type="tel" id="custPhone" placeholder="Phone Number">
+        <input type="text" id="address" placeholder="Address">
+        <input type="text" id="location" placeholder="Location Link">
+        <textarea id="details" rows="2" placeholder="Other Details (Service info...)"></textarea>
+    </div>
+
+    <div id="reminderSection">
+        <textarea id="remText" rows="4" placeholder="Type your reminder here..."></textarea>
+    </div>
+
+    <div class="btn-group">
+        <button class="save-btn" id="saveBtn" onclick="saveData()">
+            <span id="btnText">SAVE DATA</span>
+            <i class="fas fa-spinner spinner" id="btnSpin" style="display:none"></i>
+        </button>
+    </div>
+</div>
+
+<div class="list-container" id="recentList">
+    <div style="text-align:center; padding:20px;" id="loader">
+        <i class="fas fa-spinner spinner fa-2x" style="color:#1a73e8; position: static; margin: 0;"></i>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
+        authDomain: "meadi-aqua-tech.firebaseapp.com",
+        databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
+        projectId: "meadi-aqua-tech",
+        storageBucket: "meadi-aqua-tech.firebasestorage.app",
+        messagingSenderId: "531151217708",
+        appId: "1:531151217708:web:b30b6e1a0bf7fa60f29d89"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const listRef = ref(db, 'combined_records');
+    let currentMode = 'customer';
+
+    window.switchTab = (mode) => {
+        currentMode = mode;
+        document.getElementById('customerSection').style.display = mode === 'customer' ? 'block' : 'none';
+        document.getElementById('reminderSection').style.display = mode === 'reminder' ? 'block' : 'none';
+        document.getElementById('tabCust').className = `tab-btn ${mode === 'customer' ? 'active' : ''}`;
+        document.getElementById('tabRem').className = `tab-btn ${mode === 'reminder' ? 'active' : ''}`;
+    }
+
+    window.saveData = function() {
+        const btn = document.getElementById('saveBtn');
+        const spin = document.getElementById('btnSpin');
+        const txt = document.getElementById('btnText');
+        
+        let dataToSave = {
+            mode: currentMode,
+            timestamp: Date.now(),
+            dateStr: new Date().toLocaleString()
+        };
+
+        if(currentMode === 'customer') {
+            dataToSave.name = document.getElementById('custName').value;
+            dataToSave.phone = document.getElementById('custPhone').value;
+            dataToSave.addr = document.getElementById('address').value;
+            dataToSave.loc = document.getElementById('location').value;
+            dataToSave.det = document.getElementById('details').value;
+            if(!dataToSave.name) { alert("Name is required!"); return; }
+        } else {
+            dataToSave.note = document.getElementById('remText').value;
+            if(!dataToSave.note) { alert("Reminder text is empty!"); return; }
+        }
+
+        btn.disabled = true; spin.style.display = 'inline-block'; txt.style.visibility = 'hidden';
+
+        const newItemRef = push(listRef);
+        set(newItemRef, dataToSave).then(() => {
+            document.querySelectorAll('input, textarea').forEach(el => el.value = "");
+            btn.disabled = false; spin.style.display = 'none'; txt.style.visibility = 'visible';
+        }).catch(err => {
+            alert("Error saving data");
+            btn.disabled = false; spin.style.display = 'none'; txt.style.visibility = 'visible';
+        });
+    }
+
+    onValue(listRef, (snapshot) => {
+        const container = document.getElementById('recentList');
+        const loader = document.getElementById('loader');
+        if(loader) loader.style.display = 'none';
+        
+        container.innerHTML = "<h4 style='margin: 10px 5px;'>Recent Records:</h4>";
+        const data = snapshot.val();
+        const tenDaysInMs = 10 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+
+        if (data) {
+            Object.keys(data).reverse().forEach(key => {
+                const val = data[key];
+                
+                // --- AUTO DELETE LOGIC ---
+                if (now - val.timestamp > tenDaysInMs) {
+                    remove(ref(db, `combined_records/${key}`));
+                    return;
+                }
+
+                const displayTitle = val.mode === 'customer' ? val.name : "📝 Reminder";
+                const displayDesc = val.mode === 'customer' ? 
+                    `${val.phone ? '📞 ' + val.phone + ' | ' : ''} ${val.addr || val.det || ''}` : val.note;
+
+                container.innerHTML += `
+                    <div class="item-card" style="border-left-color: ${val.mode === 'customer' ? '#28a745' : '#1a73e8'}">
+                        <div class="item-info">
+                            <span class="item-name">${displayTitle}</span>
+                            <span class="item-desc">${displayDesc}</span>
+                            <span class="item-sub">${val.dateStr}</span>
+                        </div>
+                        <button class="delete-btn" onclick="deleteItem('${key}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        } else {
+            container.innerHTML += "<p style='font-size:12px; color:#999; text-align:center;'>No records found.</p>";
+        }
+    });
+
+    window.deleteItem = function(key) {
+        if(confirm("Do you want to delete this record?")) {
+            remove(ref(db, `combined_records/${key}`));
+        }
+    }
+</script>
+</body>
+</html>
