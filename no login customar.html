@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Database | Meadi Aqua Tech</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #f4f7fa; --card: #ffffff; --border: #e2e8f0; --primary: #0077b6; 
+            --text-main: #1e293b; --text-sub: #64748b; --sidebar-w: 240px;
+        }
+
+        body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); height: 100vh; overflow: hidden; }
+
+        /* Sidebar Styles */
+        .sidebar { 
+            position: fixed; top: 0; left: calc(-1 * var(--sidebar-w)); 
+            width: var(--sidebar-w); height: 100%; background: white; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 1000;
+            transition: 0.3s ease; display: flex; flex-direction: column;
+        }
+        .sidebar.open { left: 0; }
+
+        .overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.3); z-index: 999; display: none;
+        }
+        .overlay.active { display: block; }
+
+        .sidebar-header { padding: 15px; border-bottom: 1px solid var(--border); }
+        .search-box { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 14px; box-sizing: border-box; }
+
+        .alphabet-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .alpha-folder { margin-bottom: 5px; }
+        .folder-header { 
+            padding: 12px; background: #f8fafc; border-radius: 8px;
+            font-weight: 700; color: var(--primary); cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid var(--border);
+        }
+        .cust-sub-list { display: none; padding-left: 10px; flex-direction: column; gap: 5px; margin-top: 5px; }
+        .cust-item-link { 
+            padding: 10px 12px; font-size: 13px; color: var(--text-sub); 
+            cursor: pointer; border-radius: 6px; border-left: 2px solid #e2e8f0; background: #fff;
+        }
+        .cust-item-link:hover { background: #f0f9ff; color: var(--primary); }
+
+        /* Main Content Styles */
+        header { 
+            height: 65px; display: flex; align-items: center; justify-content: center; 
+            padding: 0 15px; background: white; border-bottom: 1px solid var(--border); position: relative;
+        }
+        .menu-btn { 
+            position: absolute; left: 15px; font-size: 24px; 
+            background: #f1f5f9; border: none; cursor: pointer; 
+            width: 40px; height: 40px; border-radius: 10px;
+        }
+        .header-title { font-size: 18px; font-weight: 700; color: var(--primary); }
+
+        .main-scroll { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 100px; height: calc(100vh - 135px); }
+
+        .profile-section { background: white; border-radius: 20px; padding: 20px; border: 1px solid var(--border); margin-bottom: 15px; }
+        .section-title { font-weight: 700; color: var(--primary); margin-bottom: 12px; font-size: 13px; text-transform: uppercase; border-bottom: 1px dashed var(--border); padding-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+        .detail-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+        .label { color: var(--text-sub); }
+        .value { color: var(--text-main); font-weight: 600; text-align: right; margin-left: 10px; }
+        
+        .profile-header { text-align: center; margin-bottom: 20px; }
+        .profile-img { width: 70px; height: 70px; background: var(--primary); color: white; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+
+        .history-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 13px; color: var(--text-main); min-height: 60px; white-space: pre-wrap; }
+
+        .bottom {
+            height: 70px; position: fixed; bottom: 0; left: 0; right: 0; 
+            display: flex; justify-content: space-around; align-items: center; 
+            background: white; border-top: 1px solid var(--border);
+        }
+        .nav-btn { background: none; border: none; color: var(--text-sub); font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; }
+        .map-link { display: block; text-align: center; background: #e0f2fe; color: var(--primary); padding: 12px; border-radius: 10px; text-decoration: none; font-weight: 700; margin-top: 10px; font-size: 14px; }
+        
+        /* Loading Spinner */
+        #loader { text-align: center; padding: 20px; color: var(--primary); font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <input type="text" class="search-box" id="searchInput" placeholder="Search Customer..." onkeyup="searchCust()">
+    </div>
+    <div class="alphabet-list" id="alphabetList">
+        <div id="loader">Fetching Data...</div>
+    </div>
+</div>
+
+<div style="display: flex; flex-direction: column; height: 100vh;">
+    <header>
+        <button class="menu-btn" id="menuBtn">☰</button>
+        <div class="header-title" id="pageTitle">Customer Details</div>
+    </header>
+
+    <div class="main-scroll" id="mainDisplay">
+        <p style="text-align: center; color: var(--text-sub); margin-top: 50px;">Select a customer from the side menu (☰)</p>
+    </div>
+
+    <div class="bottom">
+        <button class="nav-btn" onclick="location.reload()">🏠<br>Home</button>
+        <button class="nav-btn" onclick="window.location.href='no login customar add.html'">➕<br>Add New</button>
+        <button class="nav-btn" onclick="window.location.href='no login service add.html'">👨‍🔧<br>Add Service</button>
+    </div>
+</div>
+
+<script>
+    // Firebase Config
+    const DATABASE_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/combined_records.json";
+    
+    let customers = [];
+    let customerKeys = {}; // Firebase keys mapping
+
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("overlay");
+    const alphaListDiv = document.getElementById("alphabetList");
+    const mainDisplay = document.getElementById("mainDisplay");
+
+    document.getElementById("menuBtn").onclick = () => { sidebar.classList.add("open"); overlay.classList.add("active"); };
+    overlay.onclick = () => { sidebar.classList.remove("open"); overlay.classList.remove("active"); };
+
+    // 1. Fetch Data from Firebase
+    async function fetchCustomers() {
+        try {
+            const response = await fetch(DATABASE_URL);
+            const data = await response.json();
+            
+            customers = [];
+            if (data) {
+                // Firebase தரவுகளை Array-வாக மாற்றுதல்
+                Object.keys(data).forEach(key => {
+                    let item = data[key];
+                    item.fbKey = key; // Firebase-ல் உள்ள தனித்துவமான Key-ஐ சேமிக்கிறோம்
+                    customers.push(item);
+                });
+            }
+            renderSidebar();
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            alphaListDiv.innerHTML = "<p style='color:red; padding:10px;'>Error loading data</p>";
+        }
+    }
+
+    // 2. Render Sidebar with Alphabet Folders
+    function renderSidebar() {
+        alphaListDiv.innerHTML = "";
+        if (customers.length === 0) {
+            alphaListDiv.innerHTML = "<p style='text-align:center; color:gray;'>No customers found.</p>";
+            return;
+        }
+
+        for (let i = 65; i <= 90; i++) {
+            let char = String.fromCharCode(i);
+            let filtered = customers.filter(c => c.name && c.name.toUpperCase().startsWith(char));
+            
+            if (filtered.length > 0) {
+                let folder = document.createElement("div");
+                folder.className = "alpha-folder";
+                folder.innerHTML = `
+                    <div class="folder-header" onclick="toggleFolder('${char}')">
+                        <span>${char}</span>
+                        <span style="font-size:11px; opacity:0.6">${filtered.length} Customers</span>
+                    </div>
+                    <div class="cust-sub-list" id="folder-${char}">
+                        ${filtered.map(c => `<div class="cust-item-link" onclick="viewProfile('${c.fbKey}')">${c.name}</div>`).join('')}
+                    </div>
+                `;
+                alphaListDiv.appendChild(folder);
+            }
+        }
+    }
+
+    window.toggleFolder = (char) => {
+        let list = document.getElementById(`folder-${char}`);
+        let isOpen = list.style.display === "flex";
+        document.querySelectorAll(".cust-sub-list").forEach(el => el.style.display = "none");
+        list.style.display = isOpen ? "none" : "flex";
+    };
+
+    // 3. View Profile Details
+    window.viewProfile = (fbKey) => {
+        let c = customers.find(item => item.fbKey === fbKey);
+        sidebar.classList.remove("open");
+        overlay.classList.remove("active");
+        document.getElementById("pageTitle").innerText = c.name;
+
+        mainDisplay.innerHTML = `
+            <div class="profile-header">
+                <div class="profile-img">${c.name.charAt(0)}</div>
+                <div style="font-size:22px; font-weight:700; color:var(--text-main);">${c.name}</div>
+                <div style="color:var(--text-sub); font-size:14px;">${c.phone || 'N/A'}</div>
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">📦 Machine Info</div>
+                <div class="detail-row"><span class="label">Model</span><span class="value">${c.model || 'N/A'}</span></div>
+                <div class="detail-row"><span class="label">Install Date</span><span class="value">${c.date || 'N/A'}</span></div>
+                <div class="detail-row"><span class="label">Warranty Until</span><span class="value" style="color:red">${c.warranty || 'N/A'}</span></div>
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">📍 Address & Location</div>
+                <div class="detail-row"><span class="label">Area</span><span class="value">${c.location || 'N/A'}</span></div>
+                <div class="detail-row" style="flex-direction:column; gap:5px;">
+                    <span class="label">Full Address:</span>
+                    <span class="value" style="text-align:left; margin-left:0;">${c.address || 'N/A'}</span>
+                </div>
+                ${c.map && c.map !== "#" ? `<a href="${c.map}" target="_blank" class="map-link">🌍 Open Google Maps</a>` : ''}
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">🛠️ Service History</div>
+                <div class="history-box">${c.history || 'No service history available.'}</div>
+            </div>
+
+            <button onclick="deleteCust('${c.fbKey}')" style="width:100%; padding:12px; background:#fff1f1; color:red; border:1px solid #ffcccc; border-radius:12px; font-weight:600; margin-top:10px;">Delete Customer</button>
+        `;
+    };
+
+    // 4. Delete Logic (Firebase DELETE)
+    window.deleteCust = async (fbKey) => {
+        const passNumber = "9344165879";
+        const userInput = prompt("To delete, please enter the Authorization Phone Number:");
+
+        if (userInput === null) return;
+
+        if (userInput === passNumber) {
+            if(confirm("Are you sure you want to delete this customer permanently from Cloud?")) {
+                try {
+                    const deleteUrl = `https://meadi-aqua-tech-default-rtdb.firebaseio.com/combined_records/${fbKey}.json`;
+                    const response = await fetch(deleteUrl, { method: 'DELETE' });
+                    
+                    if (response.ok) {
+                        alert("Deleted successfully!");
+                        fetchCustomers(); // டேட்டாவை ரீலோட் செய்யவும்
+                        mainDisplay.innerHTML = '<p style="text-align: center; color: var(--text-sub); margin-top: 50px;">Customer Record Deleted Successfully.</p>';
+                        document.getElementById("pageTitle").innerText = "Customer Details";
+                    }
+                } catch (error) {
+                    alert("Delete failed. Check internet.");
+                }
+            }
+        } else {
+            alert("Incorrect Number! Delete action cancelled.");
+        }
+    };
+
+    window.searchCust = () => {
+        let val = document.getElementById("searchInput").value.toLowerCase();
+        document.querySelectorAll(".cust-item-link").forEach(el => {
+            el.style.display = el.innerText.toLowerCase().includes(val) ? "block" : "none";
+        });
+        document.querySelectorAll(".cust-sub-list").forEach(el => el.style.display = "flex");
+    };
+
+    // பக்கத்தை திறந்தவுடன் டேட்டாவை எடுக்கவும்
+    fetchCustomers();
+</script>
+
+</body>
+</html>
