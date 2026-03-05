@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Customer | Meadi Aqua Tech</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #f4f7fa; --card: #ffffff; --border: #e2e8f0; --primary: #0077b6; 
+            --text-main: #1e293b; --text-sub: #64748b; 
+        }
+
+        body { 
+            margin: 0; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); 
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .form-container {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            font-family: inherit;
+            box-sizing: border-box;
+            background: #fcfdfe;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+        }
+
+        input[type="date"] {
+            cursor: pointer;
+            color: var(--text-main);
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        .save-btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .save-btn:active:not(:disabled) {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .back-btn {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-sub);
+            font-size: 14px;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <header>
+        <div class="header-title">Registration Form</div>
+        <p style="font-size: 12px; color: var(--text-sub); margin-top: 5px;">Enter new customer details (Cloud Save)</p>
+    </header>
+
+    <div class="form-group">
+        <label>Customer Name *</label>
+        <input type="text" id="cName" placeholder="Enter full name">
+    </div>
+
+    <div class="form-group">
+        <label>Phone Number *</label>
+        <input type="tel" id="cPhone" placeholder="e.g. 9876543210">
+    </div>
+
+    <div class="form-group">
+        <label>Machine Model</label>
+        <input type="text" id="cModel" placeholder="e.g. Aqua Grand RO">
+    </div>
+
+    <div class="form-group">
+        <label>Installed Date</label>
+        <input type="date" id="cDate">
+    </div>
+
+    <div class="form-group">
+        <label>Warranty Expiry Date</label>
+        <input type="date" id="cWarranty">
+    </div>
+
+    <div class="form-group">
+        <label>Location / Area</label>
+        <input type="text" id="cLoc" placeholder="e.g. Cuddalore">
+    </div>
+
+    <div class="form-group">
+        <label>Full Address</label>
+        <textarea id="cAddress" rows="3" placeholder="Door No, Street name, Landmark..."></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>Google Map Link (Optional)</label>
+        <input type="text" id="cMap" placeholder="Paste Map URL here">
+    </div>
+
+    <button id="submitBtn" class="save-btn" onclick="saveCustomer()">Save to Cloud</button>
+    
+    <div class="back-btn" onclick="window.history.back()">← Go Back</div>
+</div>
+
+<script>
+    // Firebase URL
+    const DB_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/combined_records.json";
+
+    async function saveCustomer() {
+        const name = document.getElementById("cName").value.trim();
+        const phone = document.getElementById("cPhone").value.trim();
+        const submitBtn = document.getElementById("submitBtn");
+
+        // Validation
+        if(!name || !phone) {
+            alert("Please enter Name and Phone Number!");
+            return;
+        }
+
+        // Disable button to prevent double submission
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving...";
+
+        // Create new customer object
+        const newCust = {
+            id: Date.now(), 
+            name: name,
+            phone: phone,
+            model: document.getElementById("cModel").value || "N/A",
+            date: document.getElementById("cDate").value || "N/A",
+            warranty: document.getElementById("cWarranty").value || "N/A",
+            location: document.getElementById("cLoc").value || "N/A",
+            address: document.getElementById("cAddress").value || "N/A",
+            map: document.getElementById("cMap").value || "#",
+            history: "No service history available." // Default history
+        };
+
+        try {
+            // Firebase-க்கு டேட்டாவை அனுப்புதல் (POST)
+            const response = await fetch(DB_URL, {
+                method: 'POST',
+                body: JSON.stringify(newCust),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                alert("Customer details saved to Cloud successfully!");
+                resetForm();
+            } else {
+                throw new Error("Failed to save");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Network error! Could not save data.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Save to Cloud";
+        }
+    }
+
+    function resetForm() {
+        document.getElementById("cName").value = "";
+        document.getElementById("cPhone").value = "";
+        document.getElementById("cModel").value = "";
+        document.getElementById("cDate").value = "";
+        document.getElementById("cWarranty").value = "";
+        document.getElementById("cLoc").value = "";
+        document.getElementById("cAddress").value = "";
+        document.getElementById("cMap").value = "";
+    }
+</script>
+
+</body>
+</html>
