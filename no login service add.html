@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Service Entry | Meadi Aqua Tech</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #f4f7fa; --card: #ffffff; --border: #e2e8f0; --primary: #0077b6; 
+            --text-main: #1e293b; --text-sub: #64748b; 
+        }
+
+        body { 
+            margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); padding: 15px; display: flex; justify-content: center;
+        }
+
+        .form-container {
+            background: white; width: 100%; max-width: 500px;
+            padding: 20px; border-radius: 20px; border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px;
+        }
+
+        header { text-align: center; margin-bottom: 25px; }
+        .header-title { font-size: 20px; font-weight: 700; color: var(--primary); }
+
+        .form-group { margin-bottom: 15px; position: relative; }
+        label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
+
+        input, textarea {
+            width: 100%; padding: 12px; border: 1px solid var(--border);
+            border-radius: 12px; outline: none; font-family: inherit;
+            box-sizing: border-box; background: #fcfdfe; transition: 0.3s; font-size: 14px;
+        }
+
+        input:focus, textarea:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1); }
+
+        /* Search Results */
+        #searchResults {
+            position: absolute; width: 100%; background: white; border: 1px solid var(--border);
+            border-radius: 12px; max-height: 200px; overflow-y: auto; z-index: 100;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; margin-top: 5px;
+        }
+        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .search-item:hover { background: #f0f9ff; color: var(--primary); }
+
+        .selected-cust {
+            background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px;
+            border-radius: 12px; margin-bottom: 15px; display: none;
+        }
+
+        .save-btn {
+            width: 100%; padding: 16px; background: var(--primary);
+            color: white; border: none; border-radius: 12px;
+            font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s;
+        }
+        .save-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .save-btn:active:not(:disabled) { transform: scale(0.98); }
+
+        .back-btn { display: block; text-align: center; margin-top: 20px; color: var(--text-sub); text-decoration: none; font-size: 14px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <header>
+        <div class="header-title">New Service Entry</div>
+        <p style="font-size: 12px; color: var(--text-sub); margin-top: 5px;">Record service details in Cloud</p>
+    </header>
+
+    <div class="form-group">
+        <label>Search Customer (Name or Phone)</label>
+        <input type="text" id="searchBox" placeholder="Start typing name..." onkeyup="searchCustomer()">
+        <div id="searchResults"></div>
+    </div>
+
+    <div id="selectedInfo" class="selected-cust">
+        <div id="custDisplay" style="font-weight: 700; color: #166534;"></div>
+        <div id="modelDisplay" style="font-size: 12px; color: #166534; opacity: 0.8;"></div>
+    </div>
+
+    <div id="serviceSection" style="display:none;">
+        <div class="form-group">
+            <label>Service Date</label>
+            <input type="date" id="serviceDate">
+        </div>
+
+        <div class="form-group">
+            <label>Service / Repair Details</label>
+            <textarea id="serviceNote" rows="4" placeholder="e.g. Filter changed, RO service done..."></textarea>
+        </div>
+
+        <button id="saveBtn" class="save-btn" onclick="addService()">Save Service History</button>
+    </div>
+
+    <div class="back-btn" onclick="window.history.back()">← Go Back</div>
+</div>
+
+<script>
+    const DB_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/combined_records";
+    let customersData = {}; 
+    let selectedFbKey = null;
+
+    // இன்று தேதியை Default-ஆக வைத்தல்
+    document.getElementById('serviceDate').valueAsDate = new Date();
+
+    // Firebase-லிருந்து அனைத்து வாடிக்கையாளர்களையும் எடுத்தல்
+    async function loadCustomers() {
+        try {
+            const response = await fetch(`${DB_URL}.json`);
+            customersData = await response.json();
+        } catch (error) {
+            console.error("Error loading customers:", error);
+        }
+    }
+
+    async function searchCustomer() {
+        if (Object.keys(customersData).length === 0) await loadCustomers();
+
+        const query = document.getElementById('searchBox').value.toLowerCase();
+        const resultsDiv = document.getElementById('searchResults');
+        
+        if (query.length < 1) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        let html = '';
+        for (let key in customersData) {
+            let c = customersData[key];
+            if (c.name.toLowerCase().includes(query) || (c.phone && c.phone.includes(query))) {
+                html += `
+                    <div class="search-item" onclick="selectCust('${key}', '${c.name}', '${c.model}')">
+                        <strong>${c.name}</strong> - ${c.phone || ''}<br>
+                        <small>${c.model || 'No Model'}</small>
+                    </div>`;
+            }
+        }
+
+        if (html) {
+            resultsDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        } else {
+            resultsDiv.innerHTML = '<div class="search-item">No records found</div>';
+            resultsDiv.style.display = 'block';
+        }
+    }
+
+    function selectCust(key, name, model) {
+        selectedFbKey = key;
+        document.getElementById('searchBox').value = name;
+        document.getElementById('searchResults').style.display = 'none';
+        
+        document.getElementById('selectedInfo').style.display = 'block';
+        document.getElementById('custDisplay').innerText = "Selected: " + name;
+        document.getElementById('modelDisplay').innerText = "Machine: " + (model || "N/A");
+        
+        document.getElementById('serviceSection').style.display = 'block';
+    }
+
+    async function addService() {
+        const date = document.getElementById('serviceDate').value;
+        const note = document.getElementById('serviceNote').value.trim();
+        const saveBtn = document.getElementById('saveBtn');
+
+        if (!selectedFbKey || !note) {
+            alert("Please select a customer and enter service details!");
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Updating Cloud...";
+
+        // பழைய ஹிஸ்டரியை எடுத்தல்
+        const currentHistory = customersData[selectedFbKey].history || "";
+        const cleanHistory = (currentHistory === "No service history available." || currentHistory === "No service records yet.") ? "" : currentHistory;
+        
+        const newEntry = `[${date}] ${note}`;
+        const updatedHistory = cleanHistory ? `${newEntry}\n${cleanHistory}` : newEntry;
+
+        try {
+            // Firebase-ல் குறிப்பிட்ட வாடிக்கையாளரை மட்டும் அப்டேட் செய்தல் (PATCH)
+            const response = await fetch(`${DB_URL}/${selectedFbKey}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify({ history: updatedHistory }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                alert("Service history updated successfully!");
+                location.reload();
+            } else {
+                throw new Error("Update failed");
+            }
+        } catch (error) {
+            alert("Error updating: " + error.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerText = "Save Service History";
+        }
+    }
+
+    // முதலில் டேட்டாவை லோட் செய்யவும்
+    loadCustomers();
+</script>
+
+</body>
+</html>
