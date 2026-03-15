@@ -164,13 +164,13 @@
     </div>
 
     <button id="submitBtn" class="save-btn" onclick="saveCustomer()">Save to Cloud</button>
-    
+
     <div class="back-btn" onclick="window.history.back()">← Go Back</div>
 </div>
 
 <script>
-    // Firebase URL
-    const DB_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/combined_records.json";
+    // Firebase URL - புதிய Folder பெயருடன் மாற்றப்பட்டுள்ளது
+    const DB_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/No Logon Customar.json";
 
     async function saveCustomer() {
         const name = document.getElementById("cName").value.trim();
@@ -212,7 +212,7 @@
             });
 
             if (response.ok) {
-                alert("Customer details saved to Cloud successfully!");
+                alert("Customer details saved to 'No Logon Customar' folder successfully!");
                 resetForm();
             } else {
                 throw new Error("Failed to save");
