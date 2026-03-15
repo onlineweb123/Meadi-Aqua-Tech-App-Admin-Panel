@@ -55,7 +55,6 @@
             font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s;
         }
 
-        /* History Section */
         .history-card {
             background: white; width: 100%; max-width: 500px;
             padding: 20px; border-radius: 20px; border: 1px solid var(--border);
@@ -85,7 +84,7 @@
     </header>
 
     <div class="form-group">
-        <label>Search Customer</label>
+        <label>Search Customer (No Logon Folder)</label>
         <input type="text" id="searchBox" placeholder="Type Name or Phone..." onkeyup="searchCustomer()">
         <div id="searchResults"></div>
     </div>
@@ -116,7 +115,8 @@
 <div class="back-btn" onclick="window.history.back()">← Go Back</div>
 
 <script>
-    const DB_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/combined_records";
+    // Firebase Path - 'No Logon Customar' ஃபோல்டருக்கு மாற்றப்பட்டுள்ளது
+    const DB_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/No Logon Customar";
     let customersData = {}; 
     let selectedFbKey = null;
 
@@ -125,28 +125,28 @@
     async function loadCustomers() {
         try {
             const response = await fetch(`${DB_URL}.json`);
-            customersData = await response.json();
-        } catch (e) { console.error("Error:", e); }
+            customersData = await response.json() || {};
+        } catch (e) { console.error("Error loading customers:", e); }
     }
 
     async function searchCustomer() {
         if (Object.keys(customersData).length === 0) await loadCustomers();
         const query = document.getElementById('searchBox').value.toLowerCase();
         const resultsDiv = document.getElementById('searchResults');
-        
+
         if (query.length < 1) { resultsDiv.style.display = 'none'; return; }
 
         let html = '';
         for (let key in customersData) {
             let c = customersData[key];
-            if (c.name.toLowerCase().includes(query) || (c.phone && c.phone.includes(query))) {
+            if (c.name && (c.name.toLowerCase().includes(query) || (c.phone && c.phone.includes(query)))) {
                 html += `<div class="search-item" onclick="selectCust('${key}')">
                             <strong>${c.name}</strong> - ${c.phone || ''}<br>
                             <small>${c.model || 'No Model'}</small>
                          </div>`;
             }
         }
-        resultsDiv.innerHTML = html || '<div class="search-item">No results</div>';
+        resultsDiv.innerHTML = html || '<div class="search-item">No results found</div>';
         resultsDiv.style.display = 'block';
     }
 
@@ -159,11 +159,10 @@
         document.getElementById('custDisplay').innerText = c.name;
         document.getElementById('modelDisplay').innerText = "Machine: " + (c.model || "N/A");
         document.getElementById('serviceSection').style.display = 'block';
-        
+
         showHistory(c.history);
     }
 
-    // ஹிஸ்டரியை பிரித்து காட்டும் வசதி
     function showHistory(historyStr) {
         const historySection = document.getElementById('historySection');
         const listDiv = document.getElementById('historyList');
@@ -191,24 +190,24 @@
     async function addService() {
         const date = document.getElementById('serviceDate').value;
         const note = document.getElementById('serviceNote').value.trim();
-        if (!selectedFbKey || !note) return alert("Fill all details!");
+        if (!selectedFbKey || !note) return alert("Please fill all details!");
 
         let currentHistory = customersData[selectedFbKey].history || "";
         if (currentHistory.includes("No service")) currentHistory = "";
-        
+
         const newEntry = `[${date}] ${note}`;
+        // புதிய என்ட்ரி மேலே வருமாறு (Newest First)
         const updatedHistory = currentHistory ? `${newEntry}\n${currentHistory}` : newEntry;
 
         updateFirebase(updatedHistory);
     }
 
-    // ஹிஸ்டரியில் ஒரு குறிப்பிட்ட வரியை மட்டும் நீக்குதல்
     async function deleteHistoryItem(index) {
         if (!confirm("Are you sure you want to delete this record?")) return;
 
         let records = customersData[selectedFbKey].history.split('\n').filter(r => r.trim() !== "");
-        records.splice(index, 1); // அந்த வரிசையை மட்டும் நீக்குகிறது
-        
+        records.splice(index, 1);
+
         const updatedHistory = records.join('\n') || "No service history available.";
         updateFirebase(updatedHistory);
     }
@@ -216,8 +215,10 @@
     async function updateFirebase(historyText) {
         const btn = document.getElementById('saveBtn');
         btn.disabled = true;
+        btn.innerText = "Saving...";
 
         try {
+            // குறிப்பிட்ட Key-ல் மட்டும் Update (PATCH) செய்யப்படுகிறது
             const res = await fetch(`${DB_URL}/${selectedFbKey}.json`, {
                 method: 'PATCH',
                 body: JSON.stringify({ history: historyText }),
@@ -225,11 +226,18 @@
             });
 
             if (res.ok) {
-                alert("Updated successfully!");
+                alert("Service record updated successfully!");
                 location.reload();
+            } else {
+                throw new Error("Failed to update");
             }
-        } catch (e) { alert("Error updating cloud"); }
-        btn.disabled = false;
+        } catch (e) { 
+            alert("Error updating cloud database.");
+            console.error(e);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Save Service";
+        }
     }
 
     loadCustomers();
