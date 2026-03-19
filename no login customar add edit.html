@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Customers | Meadi Aqua Tech</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #f4f7fa; --card: #ffffff; --border: #e2e8f0; --primary: #0077b6; 
+            --text-main: #1e293b; --text-sub: #64748b; --success: #10b981;
+        }
+
+        body { 
+            margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--bg); padding: 15px;
+            display: flex; justify-content: center;
+        }
+
+        .form-container {
+            background: white; width: 100%; max-width: 500px;
+            padding: 20px; border-radius: 20px; border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px;
+        }
+
+        header { text-align: center; margin-bottom: 25px; }
+        .header-title { font-size: 20px; font-weight: 700; color: var(--primary); }
+
+        /* Search Section */
+        .search-section {
+            background: #f0f9ff; padding: 15px; border-radius: 15px; margin-bottom: 20px;
+            border: 1px dashed var(--primary);
+        }
+
+        .search-group { display: flex; gap: 8px; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
+
+        input, textarea {
+            width: 100%; padding: 12px; border: 1px solid var(--border);
+            border-radius: 12px; outline: none; font-family: inherit;
+            box-sizing: border-box; background: #fcfdfe; font-size: 14px; transition: 0.3s;
+        }
+
+        input:focus, textarea:focus { border-color: var(--primary); background: white; }
+
+        .btn {
+            width: 100%; padding: 16px; border: none; border-radius: 12px;
+            font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s;
+        }
+
+        .save-btn { background: var(--primary); color: white; }
+        .update-btn { background: var(--success); color: white; display: none; }
+        
+        .search-btn { width: auto; padding: 0 20px; background: var(--text-main); color: white; font-size: 14px; }
+
+        .back-btn {
+            display: block; text-align: center; margin-top: 20px;
+            color: var(--text-sub); font-size: 14px; text-decoration: none;
+            cursor: pointer; font-weight: 500;
+        }
+
+        #statusMsg { font-size: 12px; text-align: center; margin-top: 8px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <header>
+        <div class="header-title">Customer Manager</div>
+        <p style="font-size: 12px; color: var(--text-sub); margin-top: 5px;">Search, Add or Edit Details</p>
+    </header>
+
+    <div class="search-section">
+        <label>Search Customer (Name or Phone)</label>
+        <div class="search-group">
+            <input type="text" id="searchKey" placeholder="Enter name/phone...">
+            <button class="btn search-btn" onclick="searchCustomer()">Search</button>
+        </div>
+        <div id="statusMsg"></div>
+    </div>
+
+    <div class="form-group">
+        <label>Customer Name *</label>
+        <input type="text" id="cName" placeholder="Enter full name">
+    </div>
+
+    <div class="form-group">
+        <label>Phone Number *</label>
+        <input type="tel" id="cPhone" placeholder="e.g. 9876543210">
+    </div>
+
+    <div class="form-group">
+        <label>Machine Model</label>
+        <input type="text" id="cModel" placeholder="e.g. Aqua Grand RO">
+    </div>
+
+    <div class="form-group">
+        <label>Installed Date</label>
+        <input type="date" id="cDate">
+    </div>
+
+    <div class="form-group">
+        <label>Warranty Expiry Date</label>
+        <input type="date" id="cWarranty">
+    </div>
+
+    <div class="form-group">
+        <label>Location / Area</label>
+        <input type="text" id="cLoc" placeholder="e.g. Cuddalore">
+    </div>
+
+    <div class="form-group">
+        <label>Full Address</label>
+        <textarea id="cAddress" rows="3" placeholder="Door No, Street name..."></textarea>
+    </div>
+
+    <div class="form-group">
+        <label>Google Map Link</label>
+        <input type="text" id="cMap" placeholder="Paste Map URL here">
+    </div>
+
+    <input type="hidden" id="firebaseKey">
+
+    <button id="submitBtn" class="btn save-btn" onclick="saveCustomer()">Save to Cloud</button>
+    <button id="updateBtn" class="btn update-btn" onclick="updateCustomer()">Update Changes</button>
+    
+    <div id="clearBtn" class="back-btn" style="color: var(--primary); margin-bottom: 10px;" onclick="resetForm()">+ Add New Customer (Clear)</div>
+    <div class="back-btn" onclick="window.history.back()">← Go Back</div>
+</div>
+
+<script>
+    // Firebase URL
+    const BASE_URL = "https://meadi-aqua-tech-default-rtdb.firebaseio.com/no logon customar";
+
+    // --- SEARCH FUNCTION ---
+    async function searchCustomer() {
+        const key = document.getElementById("searchKey").value.trim().toLowerCase();
+        const status = document.getElementById("statusMsg");
+        if(!key) { alert("Please enter Name or Phone!"); return; }
+
+        status.innerText = "Searching...";
+        status.style.color = "#0077b6";
+
+        try {
+            const res = await fetch(`${BASE_URL}.json`);
+            const data = await res.json();
+
+            let foundId = null;
+            let foundData = null;
+
+            for (let id in data) {
+                if (data[id].name.toLowerCase().includes(key) || data[id].phone.includes(key)) {
+                    foundId = id;
+                    foundData = data[id];
+                    break;
+                }
+            }
+
+            if (foundData) {
+                status.innerText = "Customer Found!";
+                status.style.color = "green";
+
+                // Filling all 8 fields
+                document.getElementById("cName").value = foundData.name || "";
+                document.getElementById("cPhone").value = foundData.phone || "";
+                document.getElementById("cModel").value = foundData.model || "";
+                document.getElementById("cDate").value = foundData.date || "";
+                document.getElementById("cWarranty").value = foundData.warranty || "";
+                document.getElementById("cLoc").value = foundData.location || "";
+                document.getElementById("cAddress").value = foundData.address || "";
+                document.getElementById("cMap").value = foundData.map || "";
+                document.getElementById("firebaseKey").value = foundId;
+
+                document.getElementById("submitBtn").style.display = "none";
+                document.getElementById("updateBtn").style.display = "block";
+            } else {
+                status.innerText = "No Customer matches found.";
+                status.style.color = "red";
+            }
+        } catch (e) { status.innerText = "Error loading database."; }
+    }
+
+    // --- UPDATE FUNCTION ---
+    async function updateCustomer() {
+        const key = document.getElementById("firebaseKey").value;
+        const btn = document.getElementById("updateBtn");
+
+        const updatedData = {
+            name: document.getElementById("cName").value,
+            phone: document.getElementById("cPhone").value,
+            model: document.getElementById("cModel").value,
+            date: document.getElementById("cDate").value,
+            warranty: document.getElementById("cWarranty").value,
+            location: document.getElementById("cLoc").value,
+            address: document.getElementById("cAddress").value,
+            map: document.getElementById("cMap").value
+        };
+
+        btn.disabled = true; btn.innerText = "Updating...";
+
+        try {
+            const res = await fetch(`${BASE_URL}/${key}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify(updatedData)
+            });
+            if(res.ok) {
+                alert("Updated successfully!");
+                resetForm();
+            }
+        } catch (e) { alert("Update failed!"); }
+        finally { btn.disabled = false; btn.innerText = "Update Changes"; }
+    }
+
+    // --- SAVE FUNCTION (New) ---
+    async function saveCustomer() {
+        const name = document.getElementById("cName").value.trim();
+        const phone = document.getElementById("cPhone").value.trim();
+        if(!name || !phone) { alert("Name and Phone are required!"); return; }
+
+        const btn = document.getElementById("submitBtn");
+        const newCust = {
+            id: Date.now(),
+            name: name,
+            phone: phone,
+            model: document.getElementById("cModel").value || "N/A",
+            date: document.getElementById("cDate").value || "N/A",
+            warranty: document.getElementById("cWarranty").value || "N/A",
+            location: document.getElementById("cLoc").value || "N/A",
+            address: document.getElementById("cAddress").value || "N/A",
+            map: document.getElementById("cMap").value || "#"
+        };
+
+        btn.disabled = true; btn.innerText = "Saving...";
+
+        try {
+            const res = await fetch(`${BASE_URL}.json`, {
+                method: 'POST',
+                body: JSON.stringify(newCust)
+            });
+            if(res.ok) {
+                alert("Saved successfully!");
+                resetForm();
+            }
+        } catch (e) { alert("Save failed!"); }
+        finally { btn.disabled = false; btn.innerText = "Save to Cloud"; }
+    }
+
+    function resetForm() {
+        document.getElementById("cName").value = "";
+        document.getElementById("cPhone").value = "";
+        document.getElementById("cModel").value = "";
+        document.getElementById("cDate").value = "";
+        document.getElementById("cWarranty").value = "";
+        document.getElementById("cLoc").value = "";
+        document.getElementById("cAddress").value = "";
+        document.getElementById("cMap").value = "";
+        document.getElementById("searchKey").value = "";
+        document.getElementById("firebaseKey").value = "";
+        document.getElementById("statusMsg").innerText = "";
+        document.getElementById("submitBtn").style.display = "block";
+        document.getElementById("updateBtn").style.display = "none";
+    }
+</script>
+
+</body>
+</html>
