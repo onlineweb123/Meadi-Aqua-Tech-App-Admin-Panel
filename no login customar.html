@@ -290,7 +290,7 @@
         if (authInput.value === passNumber) {
             if(confirm("Confirm: Permanently delete this record?")) {
                 try {
-                    await fetch(`https://meadi-aqua-tech-default-rtdb.firebaseio.com/No Logon Customar/${currentKeyToDelete}.json`, { method: 'DELETE' });
+                    await fetch(`https://meadi-aqua-tech-default-rtdb.firebaseio.com/no logon customar/${currentKeyToDelete}.json`, { method: 'DELETE' });
                     location.reload();
                 } catch (e) { alert("Server Error."); }
             }
