@@ -5,7 +5,7 @@
   <title>Meadi Aqua Tech - A4 Fixed Invoice</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  
+
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -20,13 +20,13 @@
     button { width: 100%; padding: 12px; margin-top: 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
     .btn-add { background: #007bff; color: white; }
     .btn-gen { background: #28a745; color: white; }
-    
+
     .download-options { display: flex; gap: 10px; margin-top: 20px; }
     .btn-download { background: #dc3545; color: white; display: none; flex: 1; }
     .btn-pdf { background: #17a2b8; color: white; display: none; flex: 1; }
-    
+
     #billSection { margin-top: 30px; overflow-x: auto; padding-bottom: 20px; }
-    
+
     #billArea { 
         width: 794px; 
         height: 1123px; 
@@ -42,7 +42,7 @@
 
     .bill-header { text-align: center; color: #0056b3; margin-bottom: 20px; flex-shrink: 0; }
     .bill-header h1 { font-size: 32px; margin: 0; }
-    
+
     .bill-info { font-size: 15px; margin: 15px 0; line-height: 1.6; flex-shrink: 0; }
     .bill-info b { color: #0056b3; }
     .right-info { text-align: right; }
@@ -53,7 +53,7 @@
     th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 14px; }
     .text-right { text-align: right; }
     .total-row { font-weight: bold; background: #eef; font-size: 16px; }
-    
+
     .footer-note { 
         margin-top: auto; 
         padding-top: 20px;
@@ -72,7 +72,7 @@
 
 <div class="container">
   <h2>💧 Meadi Aqua Tech</h2>
-  
+
   <label>Date:</label>
   <input type="date" id="invoiceDate">
 
@@ -88,8 +88,11 @@
   <label>Service / Labor Charge (₹):</label>
   <input type="number" id="serviceCharge" value="0">
 
+  <label>Discount (₹):</label>
+  <input type="number" id="discount" value="0" style="color: red;">
+
   <hr style="margin-top:20px; border: 0.5px solid #eee;">
-  
+
   <label>Item / Spare Parts (Optional):</label>
   <div class="flex-row">
     <input type="text" id="itemName" style="flex: 2;" placeholder="e.g. Sediment Filter">
@@ -109,15 +112,17 @@
         <h1>Meadi Aqua Tech</h1>
         <p style="font-size: 16px; margin: 5px 0;">Water Purifier Sales & Service</p>
       </div>
-      
+
       <div class="bill-info">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <div><b>Name:</b> <span id="bName"></span></div>
-                <div><b>Phone:</b> <span id="bPhone"></span></div>
-                <div><b>Address:</b> <span id="bAddress"></span></div>
-            </div>
             
+            <div style="max-width: 450px;">
+    <div><b>Name:</b> <span id="bName"></span></div>
+    <div><b>Phone:</b> <span id="bPhone"></span></div>
+    <div style="word-wrap: break-word;"><b>Address:</b> <span id="bAddress"></span></div>
+</div>
+
+
             <div class="right-info">
                 <div><b>Date:</b> <span id="bDate"></span></div>
                 <div><b>Contact:</b> <span>9344165879</span></div>
@@ -141,6 +146,10 @@
                   <td colspan="3" class="text-right">Service Charges</td>
                   <td class="text-right" id="bService">₹0</td>
                 </tr>
+                <tr id="bDiscountRow" style="display: none;">
+                  <td colspan="3" class="text-right">Discount (-)</td>
+                  <td class="text-right" id="bDiscount" style="color: red;">₹0</td>
+                </tr>
                 <tr class="total-row">
                   <td colspan="3" class="text-right">Grand Total</td>
                   <td class="text-right" id="bTotal">₹0</td>
@@ -154,7 +163,7 @@
         <p style="font-size: 16px; color: #0056b3; font-weight: bold; margin: 5px 0;">Thank You! Visit Again!</p>
       </div>
     </div>
-    
+
     <div class="download-options">
         <button id="downloadBtn" class="btn-download">📥 Download Image</button>
         <button id="pdfBtn" class="btn-pdf" onclick="downloadPDF()">📄 Download High-Quality PDF</button>
@@ -192,6 +201,7 @@
     const addr = document.getElementById("custAddress").value;
     const selectedDate = document.getElementById("invoiceDate").value;
     const service = parseFloat(document.getElementById("serviceCharge").value) || 0;
+    const discount = parseFloat(document.getElementById("discount").value) || 0;
 
     if (!name || (items.length === 0 && service === 0)) {
       alert("Please enter Customer Name and at least one Item or Service Charge!");
@@ -207,6 +217,15 @@
     document.getElementById("bDate").innerText = formattedDate;
     document.getElementById("bService").innerText = `₹${service}`;
 
+    // Show or Hide Discount row based on value
+    const discRow = document.getElementById("bDiscountRow");
+    if(discount > 0) {
+        discRow.style.display = "table-row";
+        document.getElementById("bDiscount").innerText = `₹${discount}`;
+    } else {
+        discRow.style.display = "none";
+    }
+
     let total = service;
     let html = "";
     items.forEach(item => {
@@ -220,18 +239,19 @@
     }
 
     document.getElementById("billItems").innerHTML = html;
-    document.getElementById("bTotal").innerText = `₹${total}`;
     
+    // Final total calculation
+    document.getElementById("bTotal").innerText = `₹${total - discount}`;
+
     document.getElementById("billSection").style.display = "block";
     document.getElementById("downloadBtn").style.display = "block";
     document.getElementById("pdfBtn").style.display = "block";
-    
+
     setTimeout(() => {
         document.getElementById("billSection").scrollIntoView({ behavior: 'smooth' });
     }, 100);
   }
 
-  // Image Download (Scale 2 for good quality)
   document.getElementById("downloadBtn").addEventListener("click", () => {
     html2canvas(document.getElementById("billArea"), { 
         scale: 2,
@@ -245,19 +265,16 @@
     });
   });
 
-  // PDF Download (Increased Scale for Sharp Text)
   async function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const bill = document.getElementById("billArea");
     const fileName = document.getElementById("custName").value.replace(/\s+/g, '_');
 
-    // Scale 3 or 4 will make it very sharp
     html2canvas(bill, { scale: 3, useCORS: true, logging: false }).then(canvas => {
-        const imgData = canvas.toDataURL('image/jpeg', 1.0); // High quality JPEG
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
         pdf.save(`Invoice_${fileName}.pdf`);
     });
