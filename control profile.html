@@ -172,7 +172,7 @@
                 </div>
                 <div class="field-box">
                     <label>Service Date</label>
-                    <input type="text" id="newServiceDate" placeholder="e.g. 15 Feb 2026">
+                    <input type="date" id="newServiceDate" placeholder="e.g. 15 Feb 2026">
                 </div>
             </div>
 
@@ -227,7 +227,7 @@
 
     async function performSearch(input) {
         if(!input) return alert("Please enter Username or Phone Number");
-        
+
         setBtnLoading('searchBtn', true);
         const dbRef = ref(db);
         try {
@@ -244,7 +244,7 @@
                         break;
                     }
                 }
-                
+
                 if (foundKey) {
                     activeUsername = foundKey;
                     renderUserData(users[foundKey]);
@@ -287,7 +287,7 @@
         document.getElementById('editAddress').value = user.address || "";
         document.getElementById('lastFilterDate').value = user.lastFilterDate || "";
         document.getElementById('lastAMCDate').value = user.lastAMCDate || "";
-        
+
         currentHistory = user.history ? (Array.isArray(user.history) ? user.history : Object.values(user.history)) : [];
         renderHistory();
     }
@@ -350,4 +350,3 @@
 </script>
 </body>
 </html>
-
