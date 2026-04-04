@@ -231,13 +231,11 @@
         setBtnLoading('searchBtn', true);
         const dbRef = ref(db);
         try {
-            // Case-insensitive check for all users
             const allUsersSnap = await get(child(dbRef, `users`));
             if (allUsersSnap.exists()) {
                 const users = allUsersSnap.val();
                 let foundKey = "";
 
-                // Search through keys (usernames) and phone values
                 for (let key in users) {
                     if (key.toLowerCase() === input.toLowerCase() || users[key].phone === input) {
                         foundKey = key;
@@ -296,11 +294,27 @@
         const tbody = document.getElementById('historyBody');
         tbody.innerHTML = currentHistory.length === 0 ? '<tr><td colspan="3" style="text-align:center;">No records</td></tr>' : '';
 
+        // தேதி அடிப்படையில் புதியது முதலில் வரும்படி வரிசைப்படுத்துதல்
+        currentHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
         currentHistory.forEach((item, index) => {
+            const rawDate = item.date || '';
+            let formattedDate = rawDate;
+
+            if (rawDate) {
+                const d = new Date(rawDate);
+                if (!isNaN(d.getTime())) {
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    formattedDate = `${day}/${month}/${year}`;
+                }
+            }
+
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><b>${item.type}</b></td>
-                <td>${item.date}</td>
+                <td>${formattedDate}</td>
                 <td><button class="btn btn-danger btn-sm">🗑</button></td>
             `;
             row.querySelector('button').onclick = () => {
