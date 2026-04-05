@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Received Offers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0077b6;
+            --danger: #ef4444;
+            --bg: #f8fbff;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            color: #1e293b;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,119,182,0.15);
+        }
+
+        .header h1 { margin: 0; font-size: 1.2rem; }
+        .stats { font-size: 0.8rem; opacity: 0.9; margin-top: 5px; }
+
+        /* Search Bar */
+        .search-box {
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+        }
+        .search-box input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        /* Card List */
+        #offers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .offer-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            position: relative;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .time { font-size: 0.7rem; color: #64748b; font-weight: 600; margin-bottom: 5px; display: block; }
+        .name { font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 8px; display: block; }
+        
+        .contact-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            text-decoration: none;
+        }
+
+        .btn-call { background: #e0f2fe; color: var(--primary); }
+        .btn-delete { background: #fee2e2; color: var(--danger); max-width: 50px; }
+
+        .address-box {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        .loading, .empty {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        /* Offline indicator */
+        #status-bar {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            padding: 5px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: bold;
+            display: none;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+<div id="status-bar"></div>
+
+<div class="header">
+    <h1>Meadi Aqua Tech</h1>
+    <div class="stats" id="total-count">Connecting...</div>
+</div>
+
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="🔍 Search name or number..." onkeyup="filterOffers()">
+</div>
+
+<div id="offers-list">
+    <div class="loading">Loading registrations...</div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue, remove, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
+        authDomain: "meadi-aqua-tech.firebaseapp.com",
+        databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
+        projectId: "meadi-aqua-tech",
+        storageBucket: "meadi-aqua-tech.appspot.com",
+        messagingSenderId: "1036306536069",
+        appId: "1:1036306536069:web:96e98947f63628469c41d1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const offersRef = ref(db, 'creative_offers');
+
+    // 1. Connection Status Monitor
+    const connectedRef = ref(db, ".info/connected");
+    onValue(connectedRef, (snap) => {
+        const bar = document.getElementById('status-bar');
+        if (snap.val() === true) {
+            bar.style.display = "none";
+        } else {
+            bar.style.display = "block";
+            bar.style.background = "#ef4444";
+            bar.style.color = "white";
+            bar.innerText = "OFFLINE - Waiting for network...";
+        }
+    });
+
+    // 2. Fetch Data
+    onValue(offersRef, (snapshot) => {
+        const listDiv = document.getElementById('offers-list');
+        const countDiv = document.getElementById('total-count');
+        const data = snapshot.val();
+
+        if (data) {
+            const keys = Object.keys(data).reverse();
+            countDiv.innerText = `Total Submissions: ${keys.length}`;
+            listDiv.innerHTML = "";
+
+            keys.forEach((key) => {
+                const item = data[key];
+                // ஆஃபர் கான்பிக் டேட்டாவைத் தவிர்க்க (அதுவும் இதே போல்டரில் இருந்தால்)
+                if(!item.name) return; 
+
+                const date = new Date(item.timestamp).toLocaleString('en-IN', {
+                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+
+                const card = document.createElement('div');
+                card.className = 'offer-card';
+                card.setAttribute('data-name', item.name.toLowerCase());
+                card.setAttribute('data-phone', item.phone);
+                
+                card.innerHTML = `
+                    <span class="time">${date}</span>
+                    <span class="name">${item.name}</span>
+                    <div class="contact-row">
+                        <a href="tel:${item.phone}" class="btn btn-call">📞 Call Now</a>
+                        <button onclick="deleteEntry('${key}')" class="btn btn-delete">🗑️</button>
+                    </div>
+                    <div class="address-box">${item.address}</div>
+                `;
+                listDiv.appendChild(card);
+            });
+        } else {
+            listDiv.innerHTML = `<div class="empty">No entries found.</div>`;
+            countDiv.innerText = "No submissions yet.";
+        }
+    });
+
+    // 3. Delete Function
+    window.deleteEntry = function(key) {
+        if(confirm("இந்தத் தகவலை நீக்க வேண்டுமா?")) {
+            remove(ref(db, `creative_offers/${key}`))
+                .then(() => alert("Deleted successfully!"))
+                .catch(e => alert("Error: " + e.message));
+        }
+    }
+
+    // 4. Client-side Filter
+    window.filterOffers = function() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.offer-card');
+        cards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const phone = card.getAttribute('data-phone');
+            if(name.includes(q) || phone.includes(q)) {
+                card.style.display = "block";
+            } else {
+                card.style.display = "none";
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
