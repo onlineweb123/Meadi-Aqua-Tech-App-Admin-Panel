@@ -115,7 +115,7 @@
 
       <div class="bill-info">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            
+
             <div style="max-width: 450px;">
     <div><b>Name:</b> <span id="bName"></span></div>
     <div><b>Phone:</b> <span id="bPhone"></span></div>
@@ -151,7 +151,7 @@
                   <td class="text-right" id="bDiscount" style="color: red;">₹0</td>
                 </tr>
                 <tr class="total-row">
-                  <td colspan="3" class="text-right">Grand Total</td>
+                  <td colspan="3" class="text-right">Total</td>
                   <td class="text-right" id="bTotal">₹0</td>
                 </tr>
             </tfoot>
@@ -239,7 +239,7 @@
     }
 
     document.getElementById("billItems").innerHTML = html;
-    
+
     // Final total calculation
     document.getElementById("bTotal").innerText = `₹${total - discount}`;
 
