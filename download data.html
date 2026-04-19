@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Data | Meadi Aqua Tech</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f7fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 90%; }
+        h2 { color: #0077b6; margin-bottom: 10px; }
+        p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .btn-download { 
+            background: #0077b6; color: white; border: none; padding: 15px 30px; 
+            border-radius: 12px; font-weight: 700; cursor: pointer; width: 100%;
+            font-size: 16px; transition: 0.3s;
+        }
+        .btn-download:hover { background: #005f91; transform: translateY(-2px); }
+        .btn-back { margin-top: 15px; display: inline-block; color: #64748b; text-decoration: none; font-size: 13px; }
+        #status { margin-top: 15px; font-weight: 600; font-size: 13px; }
+        .loader { display: none; margin: 10px auto; border: 4px solid #f3f3f3; border-top: 4px solid #0077b6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Export Database</h2>
+    <p>உங்கள் நிறுவனத்தின் அனைத்து வரவு-செலவு கணக்குகளையும் Excel Sheet-ஆக பதிவிறக்கம் செய்ய கீழே உள்ள பொத்தானை அழுத்தவும்.</p>
+    
+    <div class="loader" id="loader"></div>
+    <button class="btn-download" id="downloadBtn">Download All Data (.xlsx)</button>
+    
+    <br>
+    <a href="index.html" class="btn-back">← Back to Dashboard</a>
+    <div id="status"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
+        authDomain: "meadi-aqua-tech.firebaseapp.com",
+        databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
+        projectId: "meadi-aqua-tech"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    document.getElementById('downloadBtn').addEventListener('click', async () => {
+        const status = document.getElementById('status');
+        const loader = document.getElementById('loader');
+        
+        status.innerText = "தரவுகள் சேகரிக்கப்படுகின்றன...";
+        status.style.color = "#0077b6";
+        loader.style.display = "block";
+
+        try {
+            // 1. அட்மின் பெயரைப் பெறுதல்
+            const adminSnap = await get(ref(db, 'admin'));
+            let currentAdmin = "Guest";
+            if (adminSnap.exists()) {
+                currentAdmin = adminSnap.val().user;
+            }
+
+            // 2. அந்த அட்மினின் டேட்டாவைப் பெறுதல்
+            const dataSnap = await get(ref(db, `users/${currentAdmin}/transactions`));
+            
+            if (dataSnap.exists()) {
+                const rawData = dataSnap.val();
+                const formattedData = [];
+
+                // 3. டேட்டாவை Excel-க்கு ஏற்றவாறு வரிசைப்படுத்துதல்
+                Object.keys(rawData).forEach(key => {
+                    const item = rawData[key];
+                    formattedData.push({
+                        "Date": item.date || "N/A",
+                        "Customer/Name": item.customer || "Internal",
+                        "Description": item.desc || "",
+                        "Type": item.type.toUpperCase(),
+                        "Amount (₹)": item.amt
+                    });
+                });
+
+                // 4. Excel கோப்பை உருவாக்குதல்
+                const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+
+                // 5. டவுன்லோட் செய்தல்
+                const fileName = `Meadi_Aqua_Tech_Data_${new Date().toLocaleDateString()}.xlsx`;
+                XLSX.writeFile(workbook, fileName);
+
+                status.innerText = "வெற்றிகரமாக பதிவிறக்கம் செய்யப்பட்டது!";
+                status.style.color = "#10b981";
+            } else {
+                status.innerText = "டேட்டா எதுவும் கண்டறியப்படவில்லை!";
+                status.style.color = "#ef4444";
+            }
+        } catch (error) {
+            console.error(error);
+            status.innerText = "பிழை ஏற்பட்டது! மீண்டும் முயற்சிக்கவும்.";
+            status.style.color = "#ef4444";
+        } finally {
+            loader.style.display = "none";
+        }
+    });
+</script>
+
+</body>
+</html>
