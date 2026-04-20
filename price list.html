@@ -165,7 +165,7 @@
 <div id="overlay" class="overlay"></div>
 
 <div class="main-container">
-    
+
     <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search spare parts..." onkeyup="filterSpares()">
 
     <div class="spares-card">
@@ -179,47 +179,51 @@
             </thead>
           <tbody>
     <tr data-price="300"><td>Inlet Valve</td><td class="price-text">300</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 300)">Add</button></td></tr>
-    
+
     <tr data-price="100"><td>Tube (1 Meter)</td><td class="price-text">100</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 100)">Add</button></td></tr>
-    
+
     <tr data-price="300"><td>Spun Filter</td><td class="price-text">300</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 300)">Add</button></td></tr>
     
+       <tr data-price="400"><td>Cendil Filter</td><td class="price-text">400</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 400)">Add</button></td></tr>
+
     <tr data-price="750"><td> Pre-Filter  Set <br>( Normal )</td><td class="price-text">750</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 750)">Add</button></td></tr>
-    
+
     <tr data-price="950"><td> Pre-Filter  Set <br>( Virgin )</td><td class="price-text">950</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 950)">Add</button></td></tr>
-    
+
       <tr data-price="1200"><td> Pre-Filter Set <br> ( Transparent ) </td><td class="price-text">1200</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 1200)">Add</button></td></tr>
-    
+
     <tr data-price="550"><td>Pre-Carbon</td><td class="price-text">550</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 550)">Add</button></td></tr>
-    
+
     <tr data-price="550"><td>Sediment</td><td class="price-text">550</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 550)">Add</button></td></tr>
-    
+
         <tr data-price="550"><td>Post Carbon</td><td class="price-text">550</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 550)">Add</button></td></tr>
-    
+
     <tr data-price="450"><td>S.V</td><td class="price-text">450</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 450)">Add</button></td></tr>
-    
+
     <tr data-price="2500"><td>Pump</td><td class="price-text">2500</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 2500)">Add</button></td></tr>
-    
+
     <tr data-price="2500"><td>Membrane</td><td class="price-text">2500</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 2500)">Add</button></td></tr>
-    
+
     <tr data-price="450"><td>M.H</td><td class="price-text">450</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 450)">Add</button></td></tr>
-    
+
     <tr data-price="250"><td>F.R</td><td class="price-text">250</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 250)">Add</button></td></tr>
-    
+
     <tr data-price="300"><td>Float Set</td><td class="price-text">300</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 300)">Add</button></td></tr>
-    
+
     <tr data-price="2000"><td>Cabinet (Body) <br>( Starting Model )</td><td class="price-text">2000</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 2000)">Add</button></td></tr>
-    
+
     <tr data-price="450"><td>Stand</td><td class="price-text">450</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 450)">Add</button></td></tr>
-    
+
     <tr data-price="950"><td>A.A / Alkaline</td><td class="price-text">950</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 950)">Add</button></td></tr>
-    
+
     <tr data-price="950"><td>SMPS (Adapter)</td><td class="price-text">950</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 950)">Add</button></td></tr>
-    
+
     <tr data-price="1200"><td>Mineral Cartridge</td><td class="price-text">1200</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 1200)">Add</button></td></tr>
-    
+
     <tr data-price="200"><td>Tap</td><td class="price-text">200</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 200)">Add</button></td></tr>
     
+    <tr data-price="200"><td>Cover</td><td class="price-text">200</td><td align="center"><button class="add-btn" onclick="toggleItem(this, 200)">Add</button></td></tr>
+
     <tr class="service-row">
         <td style="font-weight: 700; color: #b91c1c;">Service Charge</td>
         <td colspan="2" align="right">
@@ -286,7 +290,7 @@
     function filterSpares() {
         let input = document.getElementById('searchInput').value.toLowerCase();
         let rows = document.getElementById('sparesTable').getElementsByTagName('tr');
-        
+
         for (let i = 1; i < rows.length - 1; i++) {
             let text = rows[i].innerText.toLowerCase();
             rows[i].style.display = text.includes(input) ? "" : "none";
