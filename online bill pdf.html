@@ -21,6 +21,46 @@
     .btn-add { background: #007bff; color: white; }
     .btn-gen { background: #28a745; color: white; }
 
+        /* Modern & Compact Remove Button Style */
+    .temp-item { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        background: #fff; 
+        padding: 8px 12px; 
+        border-radius: 10px; 
+        margin-bottom: 6px;
+        border: 1px solid #eee;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .remove-btn { 
+        background: #fee2e2; 
+        color: #ef4444; 
+        border: none; 
+        width: 28px;
+        height: 28px;
+        border-radius: 50%; 
+        cursor: pointer; 
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+        font-size: 14px;
+    }
+
+    .remove-btn:hover {
+        background: #ef4444;
+        color: white;
+    }
+
+  
+    .temp-item { 
+        display: flex; justify-content: space-between; align-items: center;
+        background: #f9f9f9; padding: 5px 10px; border-radius: 5px; margin-bottom: 5px;
+    }
+
     .download-options { display: flex; gap: 10px; margin-top: 20px; }
     .btn-download { background: #dc3545; color: white; display: none; flex: 1; }
     .btn-pdf { background: #17a2b8; color: white; display: none; flex: 1; }
@@ -28,21 +68,13 @@
     #billSection { margin-top: 30px; overflow-x: auto; padding-bottom: 20px; }
 
     #billArea { 
-        width: 794px; 
-        height: 1123px; 
-        padding: 50px; 
-        background: white; 
-        border: 1px solid #eee; 
-        margin: 0 auto; 
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        width: 794px; height: 1123px; padding: 50px; background: white; 
+        border: 1px solid #eee; margin: 0 auto; box-sizing: border-box;
+        display: flex; flex-direction: column; overflow: hidden;
     }
 
     .bill-header { text-align: center; color: #0056b3; margin-bottom: 20px; flex-shrink: 0; }
     .bill-header h1 { font-size: 32px; margin: 0; }
-
     .bill-info { font-size: 15px; margin: 15px 0; line-height: 1.6; flex-shrink: 0; }
     .bill-info b { color: #0056b3; }
     .right-info { text-align: right; }
@@ -55,13 +87,8 @@
     .total-row { font-weight: bold; background: #eef; font-size: 16px; }
 
     .footer-note { 
-        margin-top: auto; 
-        padding-top: 20px;
-        font-size: 13px; 
-        color: #666; 
-        text-align: center; 
-        border-top: 1px solid #eee;
-        flex-shrink: 0;
+        margin-top: auto; padding-top: 20px; font-size: 13px; color: #666; 
+        text-align: center; border-top: 1px solid #eee; flex-shrink: 0;
     }
 
     .mobile-hint { font-size: 12px; color: #64748b; margin-top: 10px; display: none; text-align: center; }
@@ -101,7 +128,7 @@
   </div>
   <button class="btn-add" onclick="addItem()">➕ Add to List</button>
 
-  <div id="tempList" style="margin-top:10px; font-size: 13px; color: #555;"></div>
+  <div id="tempList" style="margin-top:15px; font-size: 14px; color: #333;"></div>
 
   <button class="btn-gen" onclick="generateBill()">🧾 Generate Fixed A4 Invoice</button>
 
@@ -115,14 +142,11 @@
 
       <div class="bill-info">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-
             <div style="max-width: 450px;">
-    <div><b>Name:</b> <span id="bName"></span></div>
-    <div><b>Phone:</b> <span id="bPhone"></span></div>
-    <div style="word-wrap: break-word;"><b>Address:</b> <span id="bAddress"></span></div>
-</div>
-
-
+                <div><b>Name:</b> <span id="bName"></span></div>
+                <div><b>Phone:</b> <span id="bPhone"></span></div>
+                <div style="word-wrap: break-word;"><b>Address:</b> <span id="bAddress"></span></div>
+            </div>
             <div class="right-info">
                 <div><b>Date:</b> <span id="bDate"></span></div>
                 <div><b>Contact:</b> <span>9344165879</span></div>
@@ -179,6 +203,20 @@
     document.getElementById('invoiceDate').value = today;
   };
 
+  // Function to display added items with a Remove button
+  function updateTempList() {
+    const listDiv = document.getElementById("tempList");
+    listDiv.innerHTML = items.length > 0 ? "<b>Added Items:</b><br>" : "";
+    
+    items.forEach((item, index) => {
+      listDiv.innerHTML += `
+        <div class="temp-item">
+          <span>${item.name} (${item.qty} x ${item.rate})</span>
+          <button class="remove-btn" onclick="removeItem(${index})">✖</button>
+        </div>`;
+    });
+  }
+
   function addItem() {
     const name = document.getElementById("itemName").value;
     const qty = parseInt(document.getElementById("itemQty").value);
@@ -186,13 +224,18 @@
 
     if (name && qty > 0 && rate > 0) {
       items.push({ name, qty, rate });
-      document.getElementById("tempList").innerHTML += `• ${name} (${qty} x ${rate})<br>`;
+      updateTempList(); // Update the list display
       document.getElementById("itemName").value = "";
       document.getElementById("itemQty").value = "";
       document.getElementById("itemRate").value = "";
     } else {
       alert("Please enter valid item details!");
     }
+  }
+
+  function removeItem(index) {
+    items.splice(index, 1); // Remove the item from array
+    updateTempList(); // Refresh the list
   }
 
   function generateBill() {
@@ -217,7 +260,6 @@
     document.getElementById("bDate").innerText = formattedDate;
     document.getElementById("bService").innerText = `₹${service}`;
 
-    // Show or Hide Discount row based on value
     const discRow = document.getElementById("bDiscountRow");
     if(discount > 0) {
         discRow.style.display = "table-row";
@@ -239,8 +281,6 @@
     }
 
     document.getElementById("billItems").innerHTML = html;
-
-    // Final total calculation
     document.getElementById("bTotal").innerText = `₹${total - discount}`;
 
     document.getElementById("billSection").style.display = "block";
@@ -253,10 +293,7 @@
   }
 
   document.getElementById("downloadBtn").addEventListener("click", () => {
-    html2canvas(document.getElementById("billArea"), { 
-        scale: 2,
-        useCORS: true
-    }).then(canvas => {
+    html2canvas(document.getElementById("billArea"), { scale: 2, useCORS: true }).then(canvas => {
       const link = document.createElement("a");
       const fileName = document.getElementById("custName").value.replace(/\s+/g, '_');
       link.download = `Invoice_${fileName}.png`;
