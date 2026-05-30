@@ -220,7 +220,7 @@
     async function fetchUsers() {
         const statsLoader = document.getElementById("statsLoader");
         const userCountElem = document.getElementById("userCount");
-        
+
         if(statsLoader) statsLoader.style.display = "inline-block";
         if(userCountElem) userCountElem.style.display = "none";
 
@@ -253,7 +253,7 @@
         const emptyMsg = document.getElementById("emptyMsg");
 
         if (!userList) return;
-        
+
         userList.innerHTML = "";
         userCount.innerText = users.length;
 
@@ -266,7 +266,7 @@
                     <td>${u.phone || '---'}</td>
                     <td><span class="city-badge">${u.city || '---'}</span></td>
                     <td class="action-btns">
-                        <a href="admin_control.html?user=${u.user}" class="btn-control">Control</a>
+                        <a href="control profile.html?user=${u.user}" class="btn-control">Control</a>
                         <button class="btn-delete" data-username="${u.user}">
                             <span class="btn-text">Delete</span>
                             <div class="spinner"></div>
@@ -322,7 +322,7 @@
                         const user = (u.user || "").toLowerCase();
                         const phone = (u.phone || "").toLowerCase();
                         const city = (u.city || "").toLowerCase();
-                        
+
                         return name.includes(query) || 
                                user.includes(query) || 
                                phone.includes(query) || 
