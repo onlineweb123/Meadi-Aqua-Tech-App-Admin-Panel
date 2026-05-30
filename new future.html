@@ -105,6 +105,24 @@
         .nav-item .nav-icon { font-size: 26px; margin-bottom: 4px; }
         .nav-item span { font-size: 12px; font-weight: 700; }
         .nav-item.active { color: var(--primary); }
+        
+                /* --- Sidebar Scroll Smooth Feature Added Safely --- */
+        .sidebar {
+            overflow-y: auto; /* லிஸ்ட் அதிகமாகும்போது தானாக ஸ்க்ரோல் பார் தோன்றும் */
+            -webkit-overflow-scrolling: touch; /* ஐபோன் மற்றும் மொபைல்களில் ஸ்மூத் ஸ்க்ரோலிங் கிடைக்க */
+            max-height: 100vh; /* மொபைல் திரையின் உயரத்திற்குள் அடங்கிவிடும் */
+            display: flex;
+            flex-direction: column;
+        }
+        /* ஆண்ட்ராய்டு மற்றும் குரோம் பிரவுசர்களில் ஸ்க்ரோல் பார் பார்க்க அசிங்கமாக இல்லாமல் மறைப்பதற்கான கோடு */
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(0, 119, 182, 0.2);
+            border-radius: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -123,6 +141,7 @@
     <a href="price list.html" class="ctrl-box">💵 Price List</a>
      <a href="customer detail.html">📒 Customer List</a>
     <a href="add_product.html">➕ Add Product </a>
+    <a href="coupon code members.html">🗣️ influencer coupon code </a>
     <a href="service list.html">👨‍🔧 Service List</a>
     <a href="online bill.html">🧾 Online Bill</a>
     <a href="analytics.html">📈 Analytics</a>
