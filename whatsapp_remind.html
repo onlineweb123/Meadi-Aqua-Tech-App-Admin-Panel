@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Meadi Aqua Tech | Scheduled Maintenance Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-gradient: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+            --success: #10b981;
+            --success-light: #dcfce7;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            padding: 30px 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            padding: 35px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.02), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-title h1 { 
+            font-size: 24px; 
+            font-weight: 800; 
+            letter-spacing: -0.5px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .date-badge { 
+            background: #e0f2fe; 
+            color: var(--primary); 
+            padding: 8px 16px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .table-responsive { 
+            overflow-x: auto; 
+            border-radius: 16px; 
+            border: 1px solid var(--border);
+            background: #ffffff;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            min-width: 700px; 
+        }
+
+        th { 
+            background: #f8fafc; 
+            color: var(--text-muted); 
+            text-align: left; 
+            padding: 16px; 
+            font-size: 11px; 
+            font-weight: 700;
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border); 
+        }
+
+        td { 
+            padding: 16px; 
+            border-bottom: 1px solid #f1f5f9; 
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .customer-name {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .phone-number {
+            color: var(--text-muted);
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .badge { 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-size: 11px; 
+            font-weight: 700; 
+            display: inline-block;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-filter { 
+            background: #fee2e2; 
+            color: #ef4444; 
+        }
+
+        .badge-amc { 
+            background: #fef3c7; 
+            color: #d97706; 
+        }
+
+        .due-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e11d48;
+            background: #fff1f2;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .action-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-start;
+        }
+
+        .btn-send {
+            background: var(--success); 
+            color: white; 
+            border: none;
+            padding: 8px 16px; 
+            border-radius: 10px; 
+            cursor: pointer;
+            font-weight: 700; 
+            font-size: 12px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-send:hover { 
+            background: #059669; 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-sms-fallback {
+            background: #e2e8f0;
+            color: #334155;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-sms-fallback:hover {
+            background: #cbd5e1;
+        }
+
+        .sent-status {
+            background: var(--success-light);
+            color: var(--success);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .empty-msg { 
+            text-align: center; 
+            padding: 50px 20px; 
+            color: var(--text-muted); 
+        }
+        
+        .empty-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .empty-msg p {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        #loadingArea {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 40px;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .spinner { 
+            display: inline-block; 
+            width: 24px; 
+            height: 24px; 
+            border: 3px solid rgba(2, 132, 199, 0.1); 
+            border-radius: 50%; 
+            border-top-color: var(--primary); 
+            animation: spin 0.8s linear infinite; 
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 640px) {
+            body { padding: 15px 10px; }
+            .container { padding: 20px; border-radius: 16px; }
+            header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .date-badge { align-self: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">
+            <h1>📅 Daily Maintenance Engine</h1>
+            <p>Automated tracker for filter changes and service agreements</p>
+        </div>
+        <div class="date-badge" id="todayDate">
+            📅 <span id="dateText">Loading Date...</span>
+        </div>
+    </header>
+
+    <div id="loadingArea">
+        <div class="spinner"></div>
+        <span>Syncing server schedules and loading customer parameters...</span>
+    </div>
+
+    <div class="table-responsive" id="tableArea" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Customer Context</th>
+                    <th>Contact Phone</th>
+                    <th>Alert Configuration</th>
+                    <th>Timeline Status</th>
+                    <th>Action Controller</th>
+                </tr>
+            </thead>
+            <tbody id="reminderList"></tbody>
+        </table>
+        <div id="emptyMsg" class="empty-msg" style="display:none;">
+            <div class="empty-icon">✨</div>
+            <p>Schedules completely clear! No client notifications are pending execution today.</p>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
+        authDomain: "meadi-aqua-tech.firebaseapp.com",
+        databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
+        projectId: "meadi-aqua-tech",
+        storageBucket: "meadi-aqua-tech.firebasestorage.app",
+        messagingSenderId: "531151217708",
+        appId: "1:531151217708:web:b30b6e1a0bf7fa60f29d89",
+        measurementId: "G-QW495L6JVE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Set today to midnight to ensure exact daily integer differences
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    document.getElementById("dateText").innerText = new Date().toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+
+    // Helper function to handle DD/MM/YYYY, DD-MM-YYYY or Standard strings correctly
+    function parseCustomDate(dateStr) {
+        if (!dateStr) return null;
+        if (typeof dateStr !== 'string') return new Date(dateStr);
+        
+        // Check for DD/MM/YYYY or DD-MM-YYYY formatting explicitly
+        const parts = dateStr.split(/[\/\-]/);
+        if (parts.length === 3) {
+            // If the first part is 4 digits, it is likely YYYY-MM-DD
+            if (parts[0].length === 4) {
+                return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            }
+            // Otherwise assume DD-MM-YYYY format layout
+            return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        }
+        return new Date(dateStr);
+    }
+
+    // Clean up expired localStorage entries (older than 24 hours)
+    function clearExpiredStorage() {
+        const now = new Date().getTime();
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith("mat_sent_")) {
+                const savedTime = localStorage.getItem(key);
+                if (savedTime && (now - parseInt(savedTime) > 24 * 60 * 60 * 1000)) {
+                    localStorage.removeItem(key);
+                }
+            }
+        }
+    }
+    clearExpiredStorage();
+
+    async function loadReminders() {
+        const reminderList = document.getElementById("reminderList");
+        const emptyMsg = document.getElementById("emptyMsg");
+        const loadingArea = document.getElementById("loadingArea");
+        const tableArea = document.getElementById("tableArea");
+
+        try {
+            const dbRef = ref(db);
+            const snapshot = await get(child(dbRef, `users`));
+            
+            reminderList.innerHTML = "";
+            let hasReminders = false;
+
+            if (snapshot.exists()) {
+                const users = snapshot.val();
+                
+                for (let key in users) {
+                    const u = users[key];
+                    if (!u.phone) continue;
+
+                    // 1. Out Filter Expiry Processing (Targeting 90-day threshold cycle)
+                    if (u.lastFilterDate) {
+                        const fDate = parseCustomDate(u.lastFilterDate);
+                        if (fDate && !isNaN(fDate.getTime())) {
+                            fDate.setHours(0,0,0,0);
+                            const diffTime = Math.abs(today - fDate);
+                            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            // Triggers exactly on day 87 (Exactly 3 days remaining before day 90)
+                            if (diffDays === 87) {
+                                const remainingDays = 90 - diffDays; 
+                                createReminderRow(key, u, "Out Filter Change", "badge-filter", remainingDays);
+                                hasReminders = true;
+                            }
+                        }
+                    }
+
+                    // 2. AMC Service Expiry Processing (Targeting 365-day cycle)
+                    if (u.lastAMCDate) {
+                        const amcDate = parseCustomDate(u.lastAMCDate);
+                        if (amcDate && !isNaN(amcDate.getTime())) {
+                            amcDate.setHours(0,0,0,0);
+                            const diffTime = Math.abs(today - amcDate);
+                            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            // Triggers exactly on day 362 (Exactly 3 days remaining before day 365)
+                            if (diffDays === 362) {
+                                const remainingDays = 365 - diffDays; 
+                                createReminderRow(key, u, "Annual AMC Service", "badge-amc", remainingDays);
+                                hasReminders = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            loadingArea.style.display = "none";
+            tableArea.style.display = "block";
+
+            if (!hasReminders) {
+                emptyMsg.style.display = "block";
+            } else {
+                emptyMsg.style.display = "none";
+            }
+
+        } catch (error) {
+            console.error("Database connection issue: ", error);
+            loadingArea.innerHTML = "<span style='color:#ef4444;'>⚠️ Security error or data synchronization failure.</span>";
+        }
+    }
+
+    function createReminderRow(userKey, user, serviceType, badgeClass, remainingDays) {
+        const reminderList = document.getElementById("reminderList");
+        const row = document.createElement('tr');
+        
+        const dayWord = remainingDays === 1 ? "day" : "days";
+        const timelineString = `Only ${remainingDays} ${dayWord} left`;
+        
+        // Branded, short and structured text layouts (2-3 lines max)
+        const messageTextWhatsApp = `*Meadi Aqua Tech* 💧\n\nDear Customer, your Water Purifier ${serviceType} is due in *${remainingDays} ${dayWord}*. Reply here to book your service slot. Thank you!`;
+        const messageTextSMS = `Meadi Aqua Tech: Dear Customer, your Water Purifier ${serviceType} is due in ${remainingDays} ${dayWord}. Reply here to book your service slot. Thank you!`;
+        
+        // Unique tracking key for specific user and specific service type
+        const storageKey = `mat_sent_${userKey}_${serviceType.replace(/\s+/g, '_')}`;
+        const isAlreadySent = localStorage.getItem(storageKey) !== null;
+
+        let actionColumnHtml = '';
+        if (isAlreadySent) {
+            actionColumnHtml = `
+                <span class="sent-status">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Sent
+                </span>`;
+        } else {
+            actionColumnHtml = `
+                <button class="btn-send" data-storage-key="${storageKey}" data-phone="${user.phone}" data-msg-wa="${encodeURIComponent(messageTextWhatsApp)}" data-msg-sms="${encodeURIComponent(messageTextSMS)}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    Send Reminder
+                </button>
+                <div class="fallback-container" style="display:none; margin-top:4px;">
+                    <button class="btn-sms-fallback">💬 No WhatsApp? Send SMS</button>
+                </div>`;
+        }
+
+        row.innerHTML = `
+            <td><span class="customer-name">${user.name || 'Unnamed Client'}</span></td>
+            <td><span class="phone-number">+91 ${user.phone}</span></td>
+            <td><span class="badge ${badgeClass}">${serviceType}</span></td>
+            <td><span class="due-text">⏳ ${timelineString}</span></td>
+            <td class="action-cell">${actionColumnHtml}</td>
+        `;
+
+        const sendBtn = row.querySelector('.btn-send');
+        const fallbackContainer = row.querySelector('.fallback-container');
+        const smsBtn = row.querySelector('.btn-sms-fallback');
+
+        if (sendBtn) {
+            sendBtn.onclick = function() {
+                const phone = this.getAttribute('data-phone');
+                const msgWa = this.getAttribute('data-msg-wa');
+                const sKey = this.getAttribute('data-storage-key');
+                
+                // Open WhatsApp natively
+                const waUrl = `https://wa.me/91${phone}?text=${msgWa}`;
+                window.open(waUrl, '_blank');
+                
+                // Show the SMS alternative button seamlessly underneath if WhatsApp fails
+                if(fallbackContainer) {
+                    fallbackContainer.style.display = 'block';
+                }
+
+                // Change main button state instantly to look clean but keep action alive until SMS confirms if needed
+                this.innerHTML = `🔄 Resend via WhatsApp`;
+                this.style.background = '#0284c7'; 
+                
+                if (smsBtn) {
+                    smsBtn.onclick = function() {
+                        const msgSms = sendBtn.getAttribute('data-msg-sms');
+                        
+                        // Save timestamp to localStorage now that SMS method execution is selected
+                        localStorage.setItem(sKey, new Date().getTime().toString());
+                        
+                        // Launch native mobile SMS client routing fallback
+                        const smsUrl = `sms:+91${phone}?body=${msgSms}`;
+                        window.open(smsUrl, '_blank');
+                        
+                        // Lock down entire UI block structure down directly
+                        sendBtn.parentElement.innerHTML = `
+                            <span class="sent-status">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Sent (SMS)
+                            </span>`;
+                    };
+                }
+
+                // Default WhatsApp success auto-save trigger state handler (4 seconds)
+                setTimeout(() => {
+                    if (sendBtn.parentNode && !localStorage.getItem(sKey)) {
+                        localStorage.setItem(sKey, new Date().getTime().toString());
+                        sendBtn.parentNode.innerHTML = `
+                            <span class="sent-status">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Sent
+                            </span>`;
+                    }
+                }, 4000);
+            };
+        }
+
+        reminderList.appendChild(row);
+    }
+
+    loadReminders();
+</script>
+
+</body>
+</html>
