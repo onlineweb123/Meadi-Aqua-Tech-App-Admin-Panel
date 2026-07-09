@@ -227,7 +227,7 @@
             padding: 50px 20px; 
             color: var(--text-muted); 
         }
-        
+
         .empty-icon {
             font-size: 40px;
             margin-bottom: 12px;
@@ -326,7 +326,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Set today to midnight to ensure exact daily integer differences
     const today = new Date();
     today.setHours(0,0,0,0);
 
@@ -337,30 +336,25 @@
         day: 'numeric' 
     });
 
-    // Helper function to handle DD/MM/YYYY, DD-MM-YYYY or Standard strings correctly
     function parseCustomDate(dateStr) {
         if (!dateStr) return null;
         if (typeof dateStr !== 'string') return new Date(dateStr);
-        
-        // Check for DD/MM/YYYY or DD-MM-YYYY formatting explicitly
+
         const parts = dateStr.split(/[\/\-]/);
         if (parts.length === 3) {
-            // If the first part is 4 digits, it is likely YYYY-MM-DD
             if (parts[0].length === 4) {
                 return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             }
-            // Otherwise assume DD-MM-YYYY format layout
             return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
         }
         return new Date(dateStr);
     }
 
-    // Clean up expired localStorage entries (older than 24 hours)
     function clearExpiredStorage() {
         const now = new Date().getTime();
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key.startsWith("mat_sent_")) {
+            if (key && key.startsWith("mat_sent_")) {
                 const savedTime = localStorage.getItem(key);
                 if (savedTime && (now - parseInt(savedTime) > 24 * 60 * 60 * 1000)) {
                     localStorage.removeItem(key);
@@ -379,47 +373,55 @@
         try {
             const dbRef = ref(db);
             const snapshot = await get(child(dbRef, `users`));
-            
+
             reminderList.innerHTML = "";
             let hasReminders = false;
 
             if (snapshot.exists()) {
                 const users = snapshot.val();
-                
+
                 for (let key in users) {
                     const u = users[key];
                     if (!u.phone) continue;
 
-                    // 1. Out Filter Expiry Processing (Targeting 90-day threshold cycle)
+                    // 1. Out Filter Expiry (Targeting 90-day cycle)
                     if (u.lastFilterDate) {
                         const fDate = parseCustomDate(u.lastFilterDate);
                         if (fDate && !isNaN(fDate.getTime())) {
                             fDate.setHours(0,0,0,0);
-                            const diffTime = Math.abs(today - fDate);
+                            const diffTime = today - fDate; // Fixed: removed Math.abs
                             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            // Triggers exactly on day 87 (Exactly 3 days remaining before day 90)
-                            if (diffDays === 87) {
+
+                            // Shows if 87 or more days have passed (Prevents missing data if checked late)
+                            if (diffDays >= 87) {
                                 const remainingDays = 90 - diffDays; 
-                                createReminderRow(key, u, "Out Filter Change", "badge-filter", remainingDays);
-                                hasReminders = true;
+                                const uniqueStorageKey = `mat_sent_${key}_Out_Filter_Change`;
+                                
+                                // Show only if reminder wasn't sent in last 24 hours
+                                if (localStorage.getItem(uniqueStorageKey) === null) {
+                                    createReminderRow(key, u, "Out Filter Change", "badge-filter", remainingDays, uniqueStorageKey);
+                                    hasReminders = true;
+                                }
                             }
                         }
                     }
 
-                    // 2. AMC Service Expiry Processing (Targeting 365-day cycle)
+                    // 2. AMC Service Expiry (Targeting 365-day cycle)
                     if (u.lastAMCDate) {
                         const amcDate = parseCustomDate(u.lastAMCDate);
                         if (amcDate && !isNaN(amcDate.getTime())) {
                             amcDate.setHours(0,0,0,0);
-                            const diffTime = Math.abs(today - amcDate);
+                            const diffTime = today - amcDate; // Fixed: removed Math.abs
                             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            // Triggers exactly on day 362 (Exactly 3 days remaining before day 365)
-                            if (diffDays === 362) {
+
+                            if (diffDays >= 362) {
                                 const remainingDays = 365 - diffDays; 
-                                createReminderRow(key, u, "Annual AMC Service", "badge-amc", remainingDays);
-                                hasReminders = true;
+                                const uniqueStorageKey = `mat_sent_${key}_Annual_AMC_Service`;
+
+                                if (localStorage.getItem(uniqueStorageKey) === null) {
+                                    createReminderRow(key, u, "Annual AMC Service", "badge-amc", remainingDays, uniqueStorageKey);
+                                    hasReminders = true;
+                                }
                             }
                         }
                     }
@@ -428,12 +430,7 @@
 
             loadingArea.style.display = "none";
             tableArea.style.display = "block";
-
-            if (!hasReminders) {
-                emptyMsg.style.display = "block";
-            } else {
-                emptyMsg.style.display = "none";
-            }
+            emptyMsg.style.display = hasReminders ? "none" : "block";
 
         } catch (error) {
             console.error("Database connection issue: ", error);
@@ -441,38 +438,34 @@
         }
     }
 
-    function createReminderRow(userKey, user, serviceType, badgeClass, remainingDays) {
+    function createReminderRow(userKey, user, serviceType, badgeClass, remainingDays, storageKey) {
         const reminderList = document.getElementById("reminderList");
         const row = document.createElement('tr');
-        
-        const dayWord = remainingDays === 1 ? "day" : "days";
-        const timelineString = `Only ${remainingDays} ${dayWord} left`;
-        
-        // Branded, short and structured text layouts (2-3 lines max)
-        const messageTextWhatsApp = `*Meadi Aqua Tech* 💧\n\nDear Customer, your Water Purifier ${serviceType} is due in *${remainingDays} ${dayWord}*. Reply here to book your service slot. Thank you!`;
-        const messageTextSMS = `Meadi Aqua Tech: Dear Customer, your Water Purifier ${serviceType} is due in ${remainingDays} ${dayWord}. Reply here to book your service slot. Thank you!`;
-        
-        // Unique tracking key for specific user and specific service type
-        const storageKey = `mat_sent_${userKey}_${serviceType.replace(/\s+/g, '_')}`;
-        const isAlreadySent = localStorage.getItem(storageKey) !== null;
 
-        let actionColumnHtml = '';
-        if (isAlreadySent) {
-            actionColumnHtml = `
-                <span class="sent-status">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    Sent
-                </span>`;
+        let timelineString = "";
+        if (remainingDays > 0) {
+            const dayWord = remainingDays === 1 ? "day" : "days";
+            timelineString = `Only ${remainingDays} ${dayWord} left`;
+        } else if (remainingDays === 0) {
+            timelineString = `Due Today!`;
         } else {
-            actionColumnHtml = `
-                <button class="btn-send" data-storage-key="${storageKey}" data-phone="${user.phone}" data-msg-wa="${encodeURIComponent(messageTextWhatsApp)}" data-msg-sms="${encodeURIComponent(messageTextSMS)}">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                    Send Reminder
-                </button>
-                <div class="fallback-container" style="display:none; margin-top:4px;">
-                    <button class="btn-sms-fallback">💬 No WhatsApp? Send SMS</button>
-                </div>`;
+            const overdueDays = Math.abs(remainingDays);
+            const dayWord = overdueDays === 1 ? "day" : "days";
+            timelineString = `Overdue by ${overdueDays} ${dayWord}`;
         }
+
+        const msgTimeline = remainingDays >= 0 ? `is due in ${remainingDays} days` : `is overdue`;
+        const messageTextWhatsApp = `*Meadi Aqua Tech* 💧\n\nDear Customer, your Water Purifier ${serviceType} ${msgTimeline}. Reply here to book your service slot. Thank you!`;
+        const messageTextSMS = `Meadi Aqua Tech: Dear Customer, your Water Purifier ${serviceType} ${msgTimeline}. Reply here to book your service slot. Thank you!`;
+
+        let actionColumnHtml = `
+            <button class="btn-send" data-storage-key="${storageKey}" data-phone="${user.phone}" data-msg-wa="${encodeURIComponent(messageTextWhatsApp)}" data-msg-sms="${encodeURIComponent(messageTextSMS)}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Send Reminder
+            </button>
+            <div class="fallback-container" style="display:none; margin-top:4px;">
+                <button class="btn-sms-fallback">💬 No WhatsApp? Send SMS</button>
+            </div>`;
 
         row.innerHTML = `
             <td><span class="customer-name">${user.name || 'Unnamed Client'}</span></td>
@@ -491,32 +484,27 @@
                 const phone = this.getAttribute('data-phone');
                 const msgWa = this.getAttribute('data-msg-wa');
                 const sKey = this.getAttribute('data-storage-key');
-                
-                // Open WhatsApp natively
+
                 const waUrl = `https://wa.me/91${phone}?text=${msgWa}`;
                 window.open(waUrl, '_blank');
-                
-                // Show the SMS alternative button seamlessly underneath if WhatsApp fails
+
                 if(fallbackContainer) {
                     fallbackContainer.style.display = 'block';
                 }
 
-                // Change main button state instantly to look clean but keep action alive until SMS confirms if needed
                 this.innerHTML = `🔄 Resend via WhatsApp`;
                 this.style.background = '#0284c7'; 
-                
+
                 if (smsBtn) {
                     smsBtn.onclick = function() {
                         const msgSms = sendBtn.getAttribute('data-msg-sms');
-                        
-                        // Save timestamp to localStorage now that SMS method execution is selected
                         localStorage.setItem(sKey, new Date().getTime().toString());
-                        
-                        // Launch native mobile SMS client routing fallback
-                        const smsUrl = `sms:+91${phone}?body=${msgSms}`;
+
+                        // Fixed: iOS vs Android compatible SMS format detection
+                        const isApple = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                        const smsUrl = isApple ? `sms:+91${phone};body=${msgSms}` : `sms:+91${phone}?body=${msgSms}`;
                         window.open(smsUrl, '_blank');
-                        
-                        // Lock down entire UI block structure down directly
+
                         sendBtn.parentElement.innerHTML = `
                             <span class="sent-status">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -525,7 +513,6 @@
                     };
                 }
 
-                // Default WhatsApp success auto-save trigger state handler (4 seconds)
                 setTimeout(() => {
                     if (sendBtn.parentNode && !localStorage.getItem(sKey)) {
                         localStorage.setItem(sKey, new Date().getTime().toString());
