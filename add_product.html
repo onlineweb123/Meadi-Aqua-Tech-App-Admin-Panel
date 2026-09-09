@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Meadi Aqua | Advanced Admin</title>
+    <title>Meadi Aqua | Unified Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -18,23 +18,30 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); padding: 20px; color: #1e293b; margin: 0; }
         .container { max-width: 600px; margin: auto; }
         
-        /* Header Card */
+        /* Header Card - Sticky removed to allow natural scrolling */
         .admin-card { 
             background: white; padding: 25px; border-radius: 24px; 
             box-shadow: 0 10px 40px rgba(0, 119, 182, 0.08); 
-            border: 1px solid #e2e8f0; margin-bottom: 35px;
-            position: sticky; top: 10px; z-index: 10;
+            border: 1px solid #e2e8f0; margin-bottom: 25px;
         }
         h2 { color: var(--primary); margin-top: 0; text-align: center; font-size: 22px; }
         
-        input, textarea { 
+        input, textarea, select { 
             width: 100%; padding: 14px; margin-bottom: 15px; 
             border: 1px solid #e2e8f0; border-radius: 14px; 
             outline: none; font-family: inherit; font-size: 14px;
             transition: 0.3s; background: #fcfdfe;
         }
-        input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(0, 119, 182, 0.1); }
+        input:focus, textarea:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(0, 119, 182, 0.1); }
         
+        /* Tab Switcher */
+        .tab-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn {
+            flex: 1; padding: 12px; background: #e2e8f0; color: #475569;
+            border: none; border-radius: 12px; font-weight: 700; cursor: pointer; text-align: center;
+        }
+        .tab-btn.active { background: var(--primary); color: white; }
+
         /* Button with Spinner */
         .btn-group { display: flex; gap: 10px; }
         button { 
@@ -95,7 +102,7 @@
 <div id="deleteModal" class="modal-overlay">
     <div class="modal-card">
         <h3>Security Check</h3>
-        <p>Enter Admin Secret Code to confirm deletion of this product.</p>
+        <p>Enter Admin Secret Code to confirm deletion.</p>
         <input type="password" id="secretInput" class="modal-input" placeholder="••••••••">
         <div class="modal-btns">
             <button class="secondary-btn" onclick="closeModal()">Cancel</button>
@@ -106,23 +113,35 @@
 
 <div class="container">
     <div class="admin-card">
-        <h2 id="formTitle">Add New Machine</h2>
+        <h2 id="formTitle">Add New Item</h2>
+        
+        <label style="font-size: 12px; font-weight: 700; color: #64748b;">CATEGORY</label>
+        <select id="pCategory" onchange="switchCategory()">
+            <option value="products">Machine (Store Page)</option>
+            <option value="spare_parts">Spare Part (Spares Page)</option>
+        </select>
+
         <input type="hidden" id="editId">
-        <input type="text" id="pName" placeholder="Machine Name">
+        <input type="text" id="pName" placeholder="Item Name">
         <input type="number" id="pPrice" placeholder="Price (₹)">
-        <textarea id="pDesc" rows="2" placeholder="Details (e.g. 8L Tank, 15L use)"></textarea>
-        <input type="text" id="pImg" placeholder="Paste Google Drive Image Link">
+        <textarea id="pDesc" rows="2" placeholder="Details (e.g. Specification or Use)"></textarea>
+        <input type="text" id="pImg" placeholder="Paste Image / Google Drive Link">
         
         <div class="btn-group">
             <button onclick="saveProduct()" id="saveBtn">
-                <span id="saveBtnText">Save Machine</span>
+                <span id="saveBtnText">Save Item</span>
                 <div class="spinner" id="saveBtnSpinner"></div>
             </button>
             <button onclick="cancelEdit()" id="cancelBtn" class="cancel-btn">Cancel</button>
         </div>
     </div>
 
-    <div class="section-title">Live Inventory</div>
+    <div class="tab-group">
+        <button class="tab-btn active" id="tabProducts" onclick="toggleTab('products')">Machines</button>
+        <button class="tab-btn" id="tabSpares" onclick="toggleTab('spare_parts')">Spare Parts</button>
+    </div>
+
+    <div class="section-title" id="listTitle">Live Machines Inventory</div>
     <div class="product-list" id="productList"></div>
 </div>
 
@@ -142,100 +161,111 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const productsRef = ref(db, 'products');
 
     const SECRET_CODE = "9344165879";
     let currentDeleteId = null;
+    let activeTab = 'products';
 
     // --- SAVE / UPDATE ---
     window.saveProduct = async function() {
+        const category = document.getElementById('pCategory').value;
         const id = document.getElementById('editId').value;
         const name = document.getElementById('pName').value;
         const price = document.getElementById('pPrice').value;
         const desc = document.getElementById('pDesc').value;
         let img = document.getElementById('pImg').value;
+        
         const saveBtn = document.getElementById('saveBtn');
         const saveBtnText = document.getElementById('saveBtnText');
         const saveBtnSpinner = document.getElementById('saveBtnSpinner');
 
         if(!name || !price || !img) return alert("Please fill important fields!");
 
-        // Link conversion
+        // Google Drive Link convertor
         if(img.includes('drive.google.com')){
             const match = img.match(/\/d\/(.+?)\//);
             if(match && match[1]) img = `https://lh3.googleusercontent.com/d/${match[1]}`;
         }
 
-        const data = { name, price, desc, img };
+        const data = { name, price: Number(price), desc, img };
 
-        // Start Spinner
         saveBtn.disabled = true;
         saveBtnText.style.display = "none";
         saveBtnSpinner.style.display = "block";
 
         try {
             if(id) {
-                await update(ref(db, 'products/' + id), data);
+                await update(ref(db, `${category}/${id}`), data);
                 alert("Updated Successfully!");
             } else {
-                await push(productsRef, data);
-                alert("New Machine Added!");
+                await push(ref(db, category), data);
+                alert("New Item Added Successfully!");
             }
             clearForm();
         } catch(e) { 
             alert("Error saving data!"); 
         } finally {
-            // Stop Spinner
             saveBtn.disabled = false;
             saveBtnText.style.display = "block";
             saveBtnSpinner.style.display = "none";
         }
     };
 
-    // --- RENDER LIST ---
-    onValue(productsRef, (snapshot) => {
-        const listDiv = document.getElementById('productList');
-        listDiv.innerHTML = "";
-        if(!snapshot.exists()){
-            listDiv.innerHTML = "<p style='text-align:center; color:#94a3b8;'>No products available.</p>";
-            return;
-        }
-        snapshot.forEach((child) => {
-            const p = child.val();
-            const key = child.key;
-            listDiv.innerHTML += `
-                <div class="item-card">
-                    <div class="item-info">
-                        <img src="${p.img}" onerror="this.src='https://via.placeholder.com/60?text=No+Img'">
-                        <div class="item-details">
-                            <b>${p.name}</b>
-                            <span>₹${p.price}</span>
+    // --- TAB SWITCH & RENDER LIST ---
+    window.toggleTab = (tab) => {
+        activeTab = tab;
+        document.getElementById('tabProducts').classList.toggle('active', tab === 'products');
+        document.getElementById('tabSpares').classList.toggle('active', tab === 'spare_parts');
+        document.getElementById('listTitle').innerText = tab === 'products' ? "Live Machines Inventory" : "Live Spare Parts Inventory";
+        loadData();
+    };
+
+    function loadData() {
+        onValue(ref(db, activeTab), (snapshot) => {
+            const listDiv = document.getElementById('productList');
+            listDiv.innerHTML = "";
+            if(!snapshot.exists()){
+                listDiv.innerHTML = "<p style='text-align:center; color:#94a3b8;'>No items available.</p>";
+                return;
+            }
+            snapshot.forEach((child) => {
+                const p = child.val();
+                const key = child.key;
+                listDiv.innerHTML += `
+                    <div class="item-card">
+                        <div class="item-info">
+                            <img src="${p.img}" onerror="this.src='https://via.placeholder.com/60?text=No+Img'">
+                            <div class="item-details">
+                                <b>${p.name}</b>
+                                <span>₹${p.price}</span>
+                            </div>
+                        </div>
+                        <div class="action-btns">
+                            <button class="edit-btn" onclick="editProduct('${key}', '${p.name}', '${p.price}', '${p.desc}', '${p.img}')">Edit</button>
+                            <button class="del-btn" onclick="openDeleteModal('${key}')">Delete</button>
                         </div>
                     </div>
-                    <div class="action-btns">
-                        <button class="edit-btn" onclick="editProduct('${key}', '${p.name}', '${p.price}', '${p.desc}', '${p.img}')">Edit</button>
-                        <button class="del-btn" onclick="openDeleteModal('${key}')">Delete</button>
-                    </div>
-                </div>
-            `;
-        });
-    });
+                `;
+            });
+        }, { onlyOnce: false });
+    }
 
     // --- EDIT ---
     window.editProduct = (id, name, price, desc, img) => {
         document.getElementById('editId').value = id;
+        document.getElementById('pCategory').value = activeTab;
         document.getElementById('pName').value = name;
         document.getElementById('pPrice').value = price;
         document.getElementById('pDesc').value = desc;
         document.getElementById('pImg').value = img;
         
-        document.getElementById('formTitle').innerText = "Edit Machine";
+        document.getElementById('formTitle').innerText = "Edit Item";
         document.getElementById('saveBtnText').innerText = "Update Now";
         document.getElementById('cancelBtn').style.display = "block";
         window.scrollTo({top: 0, behavior: 'smooth'});
     };
 
-    // --- CUSTOM MODAL FUNCTIONS ---
+    // --- DELETE MODAL ---
     window.openDeleteModal = (id) => {
         currentDeleteId = id;
         document.getElementById('deleteModal').style.display = 'flex';
@@ -254,10 +284,10 @@
         
         if(enteredCode === SECRET_CODE) {
             confirmBtn.disabled = true;
-            await remove(ref(db, 'products/' + currentDeleteId));
+            await remove(ref(db, `${activeTab}/${currentDeleteId}`));
             confirmBtn.disabled = false;
             closeModal();
-            alert("Product Deleted Successfully!");
+            alert("Item Deleted Successfully!");
         } else {
             alert("Wrong Secret Code! Access Denied.");
             document.getElementById('secretInput').value = "";
@@ -272,10 +302,18 @@
         document.getElementById('pPrice').value = "";
         document.getElementById('pDesc').value = "";
         document.getElementById('pImg').value = "";
-        document.getElementById('formTitle').innerText = "Add New Machine";
-        document.getElementById('saveBtnText').innerText = "Save Machine";
+        document.getElementById('formTitle').innerText = "Add New Item";
+        document.getElementById('saveBtnText').innerText = "Save Item";
         document.getElementById('cancelBtn').style.display = "none";
     }
+
+    window.switchCategory = () => {
+        const category = document.getElementById('pCategory').value;
+        toggleTab(category);
+    };
+
+    // Initial load
+    loadData();
 </script>
 
 </body>
