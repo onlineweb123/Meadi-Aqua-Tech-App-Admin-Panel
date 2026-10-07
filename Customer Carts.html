@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meadi Admin | Customer Carts Hub</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bs-body-bg: #f8fafc;
+            --bs-body-font-family: 'Plus Jakarta Sans', sans-serif;
+            --primary-gradient: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+        }
+
+        body {
+            background-color: var(--bs-body-bg);
+            font-family: var(--bs-body-font-family);
+            color: #1e293b;
+        }
+
+        /* Flat Header Styling (Radius இல்லாமல் கட்டமாக) */
+        .app-header {
+            background: var(--primary-gradient);
+            padding: 24px 0;
+            color: white;
+            border-radius: 0;
+            box-shadow: 0 4px 12px rgba(0, 119, 182, 0.12);
+        }
+
+        /* Card Custom Styling */
+        .cart-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .cart-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .user-badge {
+            background: #eef7ff;
+            color: #0077b6;
+            font-weight: 700;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* Product Image & Item Styling */
+        .product-img {
+            width: 55px;
+            height: 55px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .item-row {
+            padding: 10px 0;
+            border-bottom: 1px dashed #edf2f7;
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .qty-pill {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Summary Box & Action Buttons */
+        .summary-box {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .btn-call {
+            background: #25d366;
+            color: white;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 10px;
+            border: none;
+        }
+
+        .btn-call:hover {
+            background: #1eb853;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid #fca5a5;
+            transition: all 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header Banner (Flat Design) -->
+<div class="app-header mb-4">
+    <div class="container">
+        <div class="d-flex align-items-center justify-content-between">
+            <h4 class="fw-bold mb-0"><i class="fa-solid fa-cart-flatbed-suitcases me-2"></i>Customer Carts</h4>
+            <span class="badge bg-white text-primary rounded-pill px-3 py-2 fw-semibold" id="cartCountBadge">0 Active</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Area -->
+<div class="container mb-5">
+    <!-- Loader -->
+    <div id="loader" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted fw-semibold">Loading Customer Carts...</p>
+    </div>
+
+    <!-- Carts Grid -->
+    <div id="cartContainer" class="row g-4"></div>
+</div>
+
+<!-- Firebase & Script -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
+        authDomain: "meadi-aqua-tech.firebaseapp.com",
+        databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
+        projectId: "meadi-aqua-tech",
+        storageBucket: "meadi-aqua-tech.firebasestorage.app",
+        messagingSenderId: "531151217708",
+        appId: "1:531151217708:web:b30b6e1a0bf7fa60f29d89"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const container = document.getElementById("cartContainer");
+    const loader = document.getElementById("loader");
+    const cartCountBadge = document.getElementById("cartCountBadge");
+
+    const SECRET_PIN = "9344165879";
+
+    onValue(ref(db, 'carts'), (snapshot) => {
+        loader.style.display = "none";
+        container.innerHTML = "";
+        
+        const cartsData = snapshot.val();
+        if (!cartsData) {
+            cartCountBadge.innerText = "0 Active";
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="bg-white p-5 rounded-4 border">
+                        <i class="fa-solid fa-basket-shopping fa-3x text-muted mb-3"></i>
+                        <h5 class="fw-bold text-muted">No Active Carts Found</h5>
+                        <p class="text-secondary small mb-0">No customer has added products to cart right now.</p>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        const userKeys = Object.keys(cartsData);
+        cartCountBadge.innerText = `${userKeys.length} Active Users`;
+
+        userKeys.forEach((userId) => {
+            const userCart = cartsData[userId];
+            let totalAmount = 0;
+            let totalItems = 0;
+            let itemsHtml = "";
+
+            Object.keys(userCart).forEach((itemKey) => {
+                const item = userCart[itemKey];
+                const qty = item.quantity || 1;
+                const itemTotal = parseInt(item.price) * qty;
+                totalAmount += itemTotal;
+                totalItems += qty;
+
+                const imgSrc = item.image || 'https://via.placeholder.com/80?text=No+Image';
+
+                itemsHtml += `
+                    <div class="item-row d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <img src="${imgSrc}" alt="${item.productName}" class="product-img">
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark fs-6">${item.productName}</h6>
+                                <span class="qty-pill text-secondary">Qty: ${qty}</span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold text-primary">₹${itemTotal.toLocaleString('en-IN')}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML += `
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card cart-card p-3 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <!-- User Header -->
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="user-badge">
+                                    <i class="fa-solid fa-user me-2"></i>${userId}
+                                </div>
+                                <span class="badge bg-light text-secondary border rounded-pill">${totalItems} Items</span>
+                            </div>
+
+                            <!-- Items List -->
+                            <div class="mb-3">
+                                ${itemsHtml}
+                            </div>
+                        </div>
+
+                        <!-- Summary & Actions -->
+                        <div>
+                            <div class="summary-box d-flex align-items-center justify-content-between mb-3">
+                                <span class="fw-semibold text-secondary fs-6">Cart Total:</span>
+                                <span class="fw-extrabold text-dark fs-5">₹${totalAmount.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <a href="tel:${userId}" class="btn btn-call flex-grow-1 d-flex align-items-center justify-content-center gap-2">
+                                    <i class="fa-solid fa-phone"></i> Call
+                                </a>
+                                <button class="btn btn-delete d-flex align-items-center justify-content-center gap-2 delete-cart-btn" data-userid="${userId}">
+                                    <i class="fa-solid fa-trash-can"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        // Delete Event Listeners
+        document.querySelectorAll(".delete-cart-btn").forEach(button => {
+            button.addEventListener("click", function() {
+                const targetUserId = this.getAttribute("data-userid");
+                deleteCart(targetUserId);
+            });
+        });
+    });
+
+    // Delete Functionality with Security PIN
+    function deleteCart(userId) {
+        const inputPin = prompt(`User ID: ${userId}-ன் கார்ட்டை நீக்க Admin Code 93xxxxxx79 உள்ளிடவும்:`);
+
+        if (inputPin === null) {
+            return; // பயனர் Cancel கொடுத்தால்
+        }
+
+        if (inputPin.trim() === SECRET_PIN) {
+            if (confirm(`User ID: ${userId}-ன் கார்ட் விவரங்களை நிச்சயமாக நீக்க விரும்புகிறீர்களா?`)) {
+                remove(ref(db, `carts/${userId}`))
+                    .then(() => {
+                        alert("கார்ட் வெற்றிகரமாக நீக்கப்பட்டது!");
+                    })
+                    .catch((error) => {
+                        alert("நீக்குவதில் பிழை ஏற்பட்டது: " + error.message);
+                    });
+            }
+        } else {
+            alert("தவறான பாஸ்கோட்! கார்ட்டை நீக்க முடியாது.");
+        }
+    }
+</script>
+
+</body>
+</html>
