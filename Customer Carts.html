@@ -25,7 +25,7 @@
             color: #1e293b;
         }
 
-        /* Flat Header Styling (Radius இல்லாமல் கட்டமாக) */
+        /* Flat Header Styling */
         .app-header {
             background: var(--primary-gradient);
             padding: 24px 0;
@@ -99,6 +99,7 @@
             border-radius: 10px;
             padding: 10px;
             border: none;
+            text-decoration: none;
         }
 
         .btn-call:hover {
@@ -151,7 +152,7 @@
 <!-- Firebase & Script -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, onValue, get, child, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
@@ -172,7 +173,7 @@
 
     const SECRET_PIN = "9344165879";
 
-    onValue(ref(db, 'carts'), (snapshot) => {
+    onValue(ref(db, 'carts'), async (snapshot) => {
         loader.style.display = "none";
         container.innerHTML = "";
         
@@ -188,6 +189,17 @@
                     </div>
                 </div>`;
             return;
+        }
+
+        // பயனர்களின் போன் எண்களை users நோடில் இருந்து பெறுகிறோம்
+        let usersDict = {};
+        try {
+            const usersSnapshot = await get(child(ref(db), 'users'));
+            if (usersSnapshot.exists()) {
+                usersDict = usersSnapshot.val();
+            }
+        } catch (e) {
+            console.error("Error fetching users node:", e);
         }
 
         const userKeys = Object.keys(cartsData);
@@ -224,14 +236,28 @@
                 `;
             });
 
+            // பயனரின் போன் எண்ணைusers நோடில் இருந்து எடுக்கிறோம்
+            let realPhone = "";
+            let displayName = userId;
+
+            if (usersDict[userId]) {
+                realPhone = usersDict[userId].phone || "";
+                if (usersDict[userId].name) {
+                    displayName = `${usersDict[userId].name} (${userId})`;
+                }
+            }
+
+            // போன் நம்பர் இல்லை என்றால் userId-ஐ போன் நம்பராக பயன்படுத்த முயற்சிக்கும்
+            const targetCallNumber = realPhone ? realPhone : userId;
+
             container.innerHTML += `
                 <div class="col-12 col-md-6 col-lg-4">
                     <div class="card cart-card p-3 h-100 d-flex flex-column justify-content-between">
                         <div>
                             <!-- User Header -->
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <div class="user-badge">
-                                    <i class="fa-solid fa-user me-2"></i>${userId}
+                                <div class="user-badge text-truncate" style="max-width: 200px;">
+                                    <i class="fa-solid fa-user me-2"></i>${displayName}
                                 </div>
                                 <span class="badge bg-light text-secondary border rounded-pill">${totalItems} Items</span>
                             </div>
@@ -250,7 +276,7 @@
                             </div>
 
                             <div class="d-flex gap-2">
-                                <a href="tel:${userId}" class="btn btn-call flex-grow-1 d-flex align-items-center justify-content-center gap-2">
+                                <a href="tel:${targetCallNumber}" class="btn btn-call flex-grow-1 d-flex align-items-center justify-content-center gap-2">
                                     <i class="fa-solid fa-phone"></i> Call
                                 </a>
                                 <button class="btn btn-delete d-flex align-items-center justify-content-center gap-2 delete-cart-btn" data-userid="${userId}">
@@ -277,7 +303,7 @@
         const inputPin = prompt(`User ID: ${userId}-ன் கார்ட்டை நீக்க Admin Code 93xxxxxx79 உள்ளிடவும்:`);
 
         if (inputPin === null) {
-            return; // பயனர் Cancel கொடுத்தால்
+            return;
         }
 
         if (inputPin.trim() === SECRET_PIN) {
