@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Service Planner - Meadi Admin</title>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root {
+            --primary: #0288d1;
+            --primary-dark: #01579b;
+            --primary-light: #e0f2fe;
+            --gradient: linear-gradient(135deg, #0288d1 0%, #01579b 100%);
+            --bg: #f1f5f9;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --call: #25d366;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.03);
+            --shadow-md: 0 4px 12px rgba(2, 136, 209, 0.08);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            min-height: 100vh;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Top Header */
+        .navbar {
+            background: var(--gradient);
+            color: #ffffff;
+            padding: 16px 32px;
+            box-shadow: 0 4px 18px rgba(2, 136, 209, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .nav-brand i {
+            font-size: 22px;
+            background: rgba(255, 255, 255, 0.18);
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        .nav-brand h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+
+        .nav-brand p {
+            font-size: 12px;
+            opacity: 0.88;
+            margin-top: 2px;
+        }
+
+        /* Main Container */
+        .main-wrapper {
+            flex: 1;
+            width: 100%;
+            padding: 24px 32px 100px 32px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        .planner-list-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            min-height: calc(100vh - 160px);
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f1f5f9;
+            margin-bottom: 20px;
+        }
+
+        .list-header h2 {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .task-count-badge {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            background: var(--primary-light);
+            padding: 5px 14px;
+            border-radius: 20px;
+        }
+
+        /* Perfectly Balanced Task List */
+        .todo-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .todo-item {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 20px;
+            display: grid;
+            grid-template-columns: auto 2.2fr 1.3fr 3fr auto;
+            align-items: center;
+            gap: 20px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .todo-item:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+        }
+
+        /* Circular Up/Down Reorder Buttons */
+        .move-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn-move {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-move:hover {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(2, 136, 209, 0.3);
+        }
+
+        .customer-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .customer-name {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-main);
+            letter-spacing: -0.2px;
+        }
+
+        .phone-number {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            width: fit-content;
+            transition: color 0.2s ease;
+        }
+
+        .phone-number:hover {
+            color: var(--call);
+        }
+
+        .time-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: var(--primary-light);
+            color: var(--primary-dark);
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            width: fit-content;
+        }
+
+        .work-details {
+            font-size: 14px;
+            color: #334155;
+            font-weight: 500;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-complete {
+            color: var(--success);
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .btn-complete:hover {
+            background-color: var(--success);
+            color: #ffffff;
+            border-color: var(--success);
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-delete {
+            color: var(--danger);
+            background-color: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .btn-delete:hover {
+            background-color: var(--danger);
+            color: #ffffff;
+            border-color: var(--danger);
+            box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .todo-item.completed {
+            background-color: #f8fafc;
+            border-color: #f1f5f9;
+        }
+
+        .todo-item.completed .customer-name,
+        .todo-item.completed .work-details,
+        .todo-item.completed .phone-number {
+            text-decoration: line-through;
+            color: #94a3b8;
+        }
+
+        /* Floating Round Plus Button */
+        .fab-btn {
+            position: fixed;
+            bottom: 36px;
+            right: 36px;
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            background: var(--gradient);
+            color: #ffffff;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(2, 136, 209, 0.45);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+
+        .fab-btn:hover {
+            transform: scale(1.08) rotate(90deg);
+            box-shadow: 0 12px 30px rgba(2, 136, 209, 0.55);
+        }
+
+        /* Modal Pop-up */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 480px;
+            padding: 28px;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 22px;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-close-modal {
+            background: #f1f5f9;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 16px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-close-modal:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        .form-flex {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14.5px;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            background-color: #f8fafc;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(2, 136, 209, 0.1);
+        }
+
+        .btn-submit {
+            padding: 14px;
+            background: var(--gradient);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 4px 15px rgba(2, 136, 209, 0.35);
+            transition: all 0.2s ease;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.95;
+            box-shadow: 0 6px 20px rgba(2, 136, 209, 0.45);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 70px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 52px;
+            margin-bottom: 16px;
+            color: #cbd5e1;
+        }
+
+        .empty-state p {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .main-wrapper {
+                padding: 16px 16px 90px 16px;
+            }
+            .todo-item {
+                grid-template-columns: auto 1fr auto;
+                grid-template-areas: 
+                    "move customer actions"
+                    "move time actions"
+                    "move work actions";
+                gap: 12px;
+                padding: 14px;
+            }
+            .move-controls { grid-area: move; flex-direction: column; }
+            .customer-info { grid-area: customer; }
+            .time-badge { grid-area: time; }
+            .work-details { grid-area: work; white-space: normal; }
+            .actions { grid-area: actions; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="navbar">
+        <div class="nav-brand">
+            <i class="fa-solid fa-list-check"></i>
+            <div>
+                <h1>Daily Service Planner</h1>
+                <p>Manage customer appointments & service schedules</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-wrapper">
+        <section class="planner-list-card">
+            <div class="list-header">
+                <h2><i class="fa-solid fa-calendar-day" style="color: var(--primary);"></i> Today's Service Tasks</h2>
+                <span id="taskCount" class="task-count-badge">0 Tasks</span>
+            </div>
+            <ul class="todo-list" id="todoList">
+                <!-- Dynamic Tasks rendered here -->
+            </ul>
+        </section>
+    </main>
+
+    <!-- Floating Round Plus Button -->
+    <button class="fab-btn" onclick="openModal()" title="Add New Schedule">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- Pop-up Entry Modal -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-circle-plus" style="color: var(--primary);"></i> Add Service Task</h3>
+                <button class="btn-close-modal" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="form-flex">
+                <div class="input-group">
+                    <label class="input-label">Customer Name</label>
+                    <input type="text" id="custName" class="input-field" placeholder="Enter name" required>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Phone Number (Optional)</label>
+                    <input type="tel" id="custPhone" class="input-field" placeholder="Enter 10-digit number" inputmode="numeric" pattern="[0-9]*">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Time</label>
+                    <input type="time" id="taskTime" class="input-field">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Service Details</label>
+                    <input type="text" id="workDesc" class="input-field" placeholder="e.g. RO Filter Service, Pump Repair">
+                </div>
+                <button class="btn-submit" onclick="addTask()">Add Schedule</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // Firebase Configuration
+    const firebaseConfig = {
+        databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const database = firebase.database();
+    const todoRef = database.ref("todo_list");
+
+    const todoListElement = document.getElementById("todoList");
+    const taskCountElement = document.getElementById("taskCount");
+    const modal = document.getElementById("taskModal");
+
+    function openModal() {
+        modal.classList.add("active");
+    }
+
+    function closeModal() {
+        modal.classList.remove("active");
+    }
+
+    // Realtime Database Sync
+    todoRef.on("value", (snapshot) => {
+        todoListElement.innerHTML = "";
+        const tasks = [];
+
+        snapshot.forEach((childSnapshot) => {
+            tasks.push({
+                key: childSnapshot.key,
+                ...childSnapshot.val()
+            });
+        });
+
+        taskCountElement.textContent = `${tasks.length} Task${tasks.length === 1 ? '' : 's'}`;
+
+        if (tasks.length === 0) {
+            todoListElement.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-regular fa-calendar-check"></i>
+                    <p>No service schedules added for today.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort by order index
+        tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        tasks.forEach((task) => renderTask(task));
+    });
+
+    function addTask() {
+        const name = document.getElementById("custName").value.trim();
+        const phone = document.getElementById("custPhone").value.trim();
+        const time = document.getElementById("taskTime").value;
+        const work = document.getElementById("workDesc").value.trim();
+
+        if (!name) {
+            alert("Please enter a customer name.");
+            return;
+        }
+
+        const newTaskRef = todoRef.push();
+        newTaskRef.set({
+            customerName: name,
+            phone: phone || "",
+            time: time || "N/A",
+            work: work || "General Maintenance",
+            completed: false,
+            order: Date.now()
+        });
+
+        // Reset & Close Modal
+        document.getElementById("custName").value = "";
+        document.getElementById("custPhone").value = "";
+        document.getElementById("taskTime").value = "";
+        document.getElementById("workDesc").value = "";
+        closeModal();
+    }
+
+    function renderTask(task) {
+        const li = document.createElement("li");
+        li.className = `todo-item ${task.completed ? "completed" : ""}`;
+        li.dataset.key = task.key;
+
+        // Format 24hr time to 12hr AM/PM
+        let formattedTime = task.time;
+        if (task.time && task.time !== "N/A") {
+            const [hours, minutes] = task.time.split(":");
+            const h = parseInt(hours, 10);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const formattedHours = h % 12 || 12;
+            formattedTime = `${formattedHours}:${minutes} ${ampm}`;
+        }
+
+        li.innerHTML = `
+            <div class="move-controls">
+                <button class="btn-move" title="Move Up" onclick="moveTask('${task.key}', -1)">
+                    <i class="fa-solid fa-chevron-up"></i>
+                </button>
+                <button class="btn-move" title="Move Down" onclick="moveTask('${task.key}', 1)">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="customer-info">
+                <span class="customer-name">${task.customerName}</span>
+                ${task.phone ? `<a href="tel:${task.phone}" class="phone-number"><i class="fa-solid fa-phone"></i> ${task.phone}</a>` : ''}
+            </div>
+            <div class="time-badge"><i class="fa-regular fa-clock"></i> ${formattedTime}</div>
+            <div class="work-details">${task.work}</div>
+            <div class="actions">
+                <button class="btn-icon btn-complete" title="Toggle Status" onclick="toggleComplete('${task.key}', ${!task.completed})">
+                    <i class="fa-solid ${task.completed ? 'fa-rotate-left' : 'fa-check'}"></i>
+                </button>
+                <button class="btn-icon btn-delete" title="Delete Task" onclick="deleteTask('${task.key}')">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `;
+
+        todoListElement.appendChild(li);
+    }
+
+    function toggleComplete(key, status) {
+        todoRef.child(key).update({ completed: status });
+    }
+
+    function deleteTask(key) {
+        if (confirm("Are you sure you want to delete this schedule?")) {
+            todoRef.child(key).remove();
+        }
+    }
+
+    // Up / Down Reorder Logic
+    function moveTask(key, direction) {
+        const items = Array.from(todoListElement.querySelectorAll('.todo-item'));
+        const currentIndex = items.findIndex(item => item.dataset.key === key);
+        const targetIndex = currentIndex + direction;
+
+        if (targetIndex >= 0 && targetIndex < items.length) {
+            const currentItem = items[currentIndex];
+            const targetItem = items[targetIndex];
+
+            if (direction === -1) {
+                todoListElement.insertBefore(currentItem, targetItem);
+            } else {
+                todoListElement.insertBefore(currentItem, targetItem.nextSibling);
+            }
+
+            // Sync updated sequence with Firebase
+            const updatedItems = Array.from(todoListElement.querySelectorAll('.todo-item'));
+            updatedItems.forEach((item, idx) => {
+                const itemKey = item.dataset.key;
+                if (itemKey) {
+                    todoRef.child(itemKey).update({ order: idx });
+                }
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
