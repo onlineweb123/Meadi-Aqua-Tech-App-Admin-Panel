@@ -5,64 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meadi Aqua - Analytics Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --google-blue: #1a73e8;
-            --google-gray: #5f6368;
-            --bg-light: #f8f9fa;
-            --success: #1e8e3e;
-            --warning: #f9ab00;
-            --danger: #d93025;
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --primary-dark: #1d4ed8;
+            --bg-body: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --danger: #ef4444;
+            --danger-light: #fef2f2;
+            --success: #10b981;
+            --radius: 16px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Google Sans', Roboto, sans-serif; }
-        body { background: var(--bg-light); margin: 0; padding: 10px; color: #3c4043; }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg-body); margin: 0; padding: 16px; color: var(--text-main); max-width: 600px; margin-left: auto; margin-right: auto; }
 
         /* Small Header Spinner */
         .spinner-small {
-            width: 18px; height: 18px;
-            border: 2px solid #dadce0;
-            border-top: 2px solid var(--google-blue);
+            width: 16px; height: 16px;
+            border: 2.5px solid #cbd5e1;
+            border-top: 2.5px solid var(--primary);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             display: inline-block;
-            margin-left: 10px;
-            visibility: visible; /* ஆரம்பத்தில் தெரியும் */
+            margin-left: 8px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .ga-header { padding: 15px 5px; border-bottom: 1px solid #dadce0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .ga-header h2 { margin: 0; font-size: 1.1rem; color: var(--google-blue); display: flex; align-items: center; gap: 5px; }
+        .ga-header { padding: 12px 4px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .ga-header h2 { margin: 0; font-size: 1.2rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+
+        .live-dot { width: 9px; height: 9px; background: var(--success); border-radius: 50%; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+
+        .ga-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .ga-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow-sm); }
+        .ga-card .label { font-size: 11px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+        .ga-card .value { font-size: 1.6rem; font-weight: 700; color: var(--text-main); margin-top: 6px; }
+
+        .chart-container { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; height: 200px; box-shadow: var(--shadow-sm); }
+
+        .action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .search-box { flex: 1; min-width: 140px; padding: 10px 16px; border: 1px solid var(--border-color); border-radius: 24px; font-size: 13px; outline: none; background: var(--card-bg); box-shadow: var(--shadow-sm); transition: all 0.2s; }
+        .search-box:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         
-        .live-dot { width: 8px; height: 8px; background: #34a853; border-radius: 50%; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+        .btn-mini { padding: 9px 14px; border-radius: 24px; border: 1px solid var(--border-color); background: var(--card-bg); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-main); box-shadow: var(--shadow-sm); transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-mini:active { transform: scale(0.96); }
+        .btn-danger { color: var(--danger); background: var(--danger-light); border-color: #fecaca; }
 
-        .ga-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .ga-card { background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 15px; }
-        .ga-card .label { font-size: 11px; color: var(--google-gray); font-weight: bold; }
-        .ga-card .value { font-size: 1.5rem; font-weight: bold; color: #202124; margin-top: 5px; }
-
-        .chart-container { background: white; border: 1px solid #dadce0; border-radius: 8px; padding: 15px; margin-bottom: 15px; height: 180px; }
-
-        .action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
-        .search-box { flex: 1; min-width: 150px; padding: 10px 15px; border: 1px solid #dadce0; border-radius: 20px; font-size: 14px; outline: none; }
-        .btn-mini { padding: 8px 12px; border-radius: 6px; border: 1px solid #dadce0; background: white; font-size: 12px; font-weight: 500; cursor: pointer; }
-        .btn-danger { color: var(--danger); border-color: #fce8e6; }
-
-        .table-card { background: white; border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; }
-        .table-card h4 { padding: 12px; margin: 0; font-size: 13px; border-bottom: 1px solid #dadce0; color: var(--google-gray); }
-        .visit-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f3f4; align-items: center; cursor: pointer; }
-        .user-id { font-size: 13px; font-weight: bold; color: var(--google-blue); }
-        .page-url { font-size: 11px; color: #70757a; }
+        .table-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+        .table-card h4 { padding: 14px 16px; margin: 0; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--border-color); color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+        .visit-row { display: flex; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border-color); align-items: center; cursor: pointer; transition: background 0.15s; }
+        .visit-row:last-child { border-bottom: none; }
+        .visit-row:hover { background: var(--primary-light); }
+        .user-id { font-size: 14px; font-weight: 600; color: var(--primary); }
+        .page-url { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
         /* Modals */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 3000; overflow-y: auto; padding: 20px; }
-        .modal-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .close-btn { font-size: 24px; cursor: pointer; color: #5f6368; }
-        
-        .timeline-item { border-left: 2px solid var(--google-blue); padding-left: 15px; margin-bottom: 20px; position: relative; }
-        .timeline-item::before { content: ''; position: absolute; left: -7px; top: 0; width: 12px; height: 12px; background: var(--google-blue); border-radius: 50%; }
-        
-        #lastMonthChartContainer { height: 250px; margin-top: 20px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--card-bg); z-index: 3000; overflow-y: auto; padding: 20px; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+        .close-btn { font-size: 20px; cursor: pointer; color: var(--text-muted); padding: 4px 8px; border-radius: 50%; background: var(--bg-body); transition: background 0.2s; }
+        .close-btn:hover { background: #e2e8f0; }
+
+        .timeline-item { border-left: 2px solid var(--primary); padding-left: 16px; margin-bottom: 20px; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; background: var(--primary); border-radius: 50%; border: 2px solid var(--card-bg); }
+
+        #lastMonthChartContainer { height: 240px; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -71,13 +86,14 @@
         <h2>
             <span class="live-dot"></span> 
             Meadi Aqua Admin
-            <div id="header-spinner" class="spinner-small"></div> </h2>
+            <div id="header-spinner" class="spinner-small"></div>
+        </h2>
         <button class="btn-mini btn-danger" onclick="resetLogs()">⚠️ Reset</button>
     </div>
 
     <div class="ga-card-grid">
-        <div class="ga-card"><div class="label">ACTIVE (5M)</div><div class="value" id="activeUsers">0</div></div>
-        <div class="ga-card"><div class="label">TOTAL LOGS</div><div class="value" id="totalSessions">0</div></div>
+        <div class="ga-card"><div class="label">Active (5m)</div><div class="value" id="activeUsers">0</div></div>
+        <div class="ga-card"><div class="label">Total Logs</div><div class="value" id="totalSessions">0</div></div>
     </div>
 
     <div class="chart-container"><canvas id="trafficChart"></canvas></div>
@@ -89,33 +105,41 @@
     </div>
 
     <div class="table-card">
-        <h4>RECENT ACTIVITY</h4>
+        <h4>Recent Activity</h4>
         <div id="visitList"></div>
     </div>
 
     <div id="lastMonthModal" class="modal">
         <div class="modal-header">
-            <span class="close-btn" onclick="closeModal('lastMonthModal')">←</span>
-            <div><h2 style="margin:0; font-size: 1.2rem;">Last Month Analysis</h2></div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span class="close-btn" onclick="closeModal('lastMonthModal')">✕</span>
+                <h2 style="margin:0; font-size: 1.1rem; font-weight:700;">Last Month Analysis</h2>
+            </div>
         </div>
         <div class="ga-card-grid">
-            <div class="ga-card"><div class="label">LAST MONTH VISITS</div><div class="value" id="lmTotal">0</div></div>
-            <div class="ga-card"><div class="label">UNIQUE USERS</div><div class="value" id="lmUsers">0</div></div>
+            <div class="ga-card"><div class="label">Last Month Visits</div><div class="value" id="lmTotal">0</div></div>
+            <div class="ga-card"><div class="label">Unique Users</div><div class="value" id="lmUsers">0</div></div>
         </div>
         <div id="lastMonthChartContainer"><canvas id="lastMonthChart"></canvas></div>
     </div>
 
     <div id="userModal" class="modal">
         <div class="modal-header">
-            <span class="close-btn" onclick="closeModal('userModal')">←</span>
-            <div><h2 id="modalUserName" style="margin:0; font-size: 1.2rem;">User Path</h2><span id="modalUserDevice" style="font-size: 12px; color: #777;"></span></div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span class="close-btn" onclick="closeModal('userModal')">✕</span>
+                <div>
+                    <h2 id="modalUserName" style="margin:0; font-size: 1.1rem; font-weight:700;">User Path</h2>
+                    <span id="modalUserDevice" style="font-size: 12px; color: var(--text-muted);"></span>
+                </div>
+            </div>
+            <button class="btn-mini btn-danger" id="deleteUserBtn">🗑️ Delete User</button>
         </div>
         <div id="userTimeline"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, onValue, remove, get, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
@@ -126,17 +150,18 @@
             messagingSenderId: "531151217708",
             appId: "1:531151217708:web:b30b6e1a0bf7fa60f29d89"
         };
-        
+
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         let allRecords = [];
         let liveChart, lmChart;
+        let currentSelectedUser = null;
 
         // Chart Setup
         liveChart = new Chart(document.getElementById('trafficChart'), {
             type: 'line',
-            data: { labels: [], datasets: [{ label: 'Live', data: [], borderColor: '#1a73e8', fill: true, tension: 0.4, backgroundColor: 'rgba(26,115,232,0.1)' }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { beginAtZero: true } } }
+            data: { labels: [], datasets: [{ label: 'Live', data: [], borderColor: '#2563eb', fill: true, tension: 0.4, backgroundColor: 'rgba(37, 99, 235, 0.08)' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { beginAtZero: true, grid: { color: '#f1f5f9' } } } }
         });
 
         // Listen for Data
@@ -147,11 +172,15 @@
                 document.getElementById('totalSessions').innerText = allRecords.length;
                 const active = allRecords.filter(r => r.time > Date.now() - 300000).length;
                 document.getElementById('activeUsers').innerText = active || 1;
-                
+
                 updateLiveChart(allRecords.slice(0, 10));
                 renderTable(allRecords);
+            } else {
+                allRecords = [];
+                document.getElementById('totalSessions').innerText = 0;
+                document.getElementById('activeUsers').innerText = 0;
+                renderTable([]);
             }
-            // டேட்டா வந்தவுடன் Spinner-ஐ மறைக்கவும்
             document.getElementById('header-spinner').style.display = 'none';
         }, (error) => {
             document.getElementById('header-spinner').style.display = 'none';
@@ -168,11 +197,11 @@
             const container = document.getElementById("visitList");
             const seen = new Set();
             const unique = data.filter(item => { const k = item.username; return seen.has(k) ? false : seen.add(k); });
-            
+
             container.innerHTML = unique.slice(0, 20).map(v => `
                 <div class="visit-row" onclick="showUserDetails('${v.username}')">
                     <div><div class="user-id">${v.username}</div><div class="page-url">${v.page}</div></div>
-                    <div style="text-align:right; font-size:11px; color:#999;">${new Date(v.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                    <div style="text-align:right; font-size:11px; color:var(--text-muted); font-weight:500;">${new Date(v.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                 </div>
             `).join('');
         }
@@ -189,22 +218,60 @@
             lmData.forEach(r => { const d = new Date(r.time).getDate(); days[d] = (days[d] || 0) + 1; });
             lmChart = new Chart(document.getElementById('lastMonthChart'), {
                 type: 'bar',
-                data: { labels: Object.keys(days).map(d => "Day "+d), datasets: [{ label: 'Visits', data: Object.values(days), backgroundColor: '#1a73e8' }] },
-                options: { responsive: true, maintainAspectRatio: false }
+                data: { labels: Object.keys(days).map(d => "Day "+d), datasets: [{ label: 'Visits', data: Object.values(days), backgroundColor: '#2563eb', borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
             });
         };
 
         window.showUserDetails = (username) => {
+            currentSelectedUser = username;
             const history = allRecords.filter(r => r.username === username);
             document.getElementById('modalUserName').innerText = username;
             document.getElementById('userTimeline').innerHTML = history.map(v => `
                 <div class="timeline-item">
-                    <div style="font-size:11px; color:#777;">${new Date(v.time).toLocaleString()}</div>
-                    <div style="font-weight:bold; margin:3px 0;">${v.page}</div>
+                    <div style="font-size:11px; color:var(--text-muted); font-weight:500;">${new Date(v.time).toLocaleString()}</div>
+                    <div style="font-weight:600; margin:4px 0; color:var(--text-main);">${v.page}</div>
                 </div>
             `).join('');
             document.getElementById('userModal').style.display = 'block';
         };
+
+        // குறிப்பிட்ட பயனரை மட்டும் நீக்கும் பங்க்ஷன்
+        document.getElementById('deleteUserBtn').addEventListener('click', async () => {
+            if (!currentSelectedUser) return;
+            if (confirm(`${currentSelectedUser} அவர்களின் தகவல்களை மட்டும் நீக்கவா?`)) {
+                try {
+                    const visitsRef = ref(db, 'analytics/visits');
+                    const userQuery = query(visitsRef, orderByChild('username'), equalTo(currentSelectedUser));
+                    const snapshot = await get(userQuery);
+                    
+                    if (snapshot.exists()) {
+                        const deletePromises = [];
+                        snapshot.forEach((childSnapshot) => {
+                            deletePromises.push(remove(ref(db, `analytics/visits/${childSnapshot.key}`)));
+                        });
+                        
+                        await Promise.all(deletePromises);
+                        closeModal('userModal');
+                    } else {
+                        const allSnapshot = await get(visitsRef);
+                        if (allSnapshot.exists()) {
+                            const data = allSnapshot.val();
+                            const deletePromises = [];
+                            Object.keys(data).forEach(key => {
+                                if (data[key].username === currentSelectedUser) {
+                                    deletePromises.push(remove(ref(db, `analytics/visits/${key}`)));
+                                }
+                            });
+                            await Promise.all(deletePromises);
+                            closeModal('userModal');
+                        }
+                    }
+                } catch (error) {
+                    alert("நீக்குவதில் பிழை ஏற்பட்டது: " + error.message);
+                }
+            }
+        });
 
         window.closeModal = (id) => document.getElementById(id).style.display = 'none';
 
