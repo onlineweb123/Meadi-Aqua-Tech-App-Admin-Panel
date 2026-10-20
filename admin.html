@@ -120,6 +120,10 @@
         .user-card { background: var(--white); padding: 15px; border-radius: 18px; border: 1px solid var(--border); display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
 
         .save-btn { background: var(--success); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .hide-btn { background: #64748b; color: white; border: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; margin-left: 4px; }
+        .unhide-btn { background: var(--primary); color: white; border: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .toggle-hidden-btn { background: none; border: 1px dashed var(--text-sub); color: var(--text-sub); padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: bold; margin-top: 10px; width: 100%; text-align: center; }
+
         .logout-btn { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 12px; }
 
         /* BOTTOM NAVIGATION */
@@ -182,7 +186,7 @@
             <a href="send notification.html" class="ctrl-box">🔔 Send Notificati </a>
              <a href="new future.html" class="ctrl-box">✴️ New Future </a>
              <a href="notes send.html" class="ctrl-box">📝 Notes Send </a>
-            
+
 
     </div>
 
@@ -206,6 +210,22 @@
                     </tr>
                 </thead>
                 <tbody id="expiryTableBody"></tbody>
+            </table>
+        </div>
+        <button id="toggleHiddenBtn" class="toggle-hidden-btn" style="display:none;" onclick="toggleHiddenTable()">👁️ Show Hidden Users</button>
+        <div id="hiddenTableWrapper" class="table-wrapper" style="display:none; margin-top:15px; border-top:1px dashed var(--border); padding-top:10px;">
+            <p style="color: var(--text-sub); font-weight: 700; margin: 5px 0 10px 0; font-size: 12px;">🙈 Hidden Due Users</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>CUSTOMER</th>
+                        <th>DUE STATUS</th>
+                        <th>FILTER</th>
+                        <th>AMC</th>
+                        <th>ACTION</th>
+                    </tr>
+                </thead>
+                <tbody id="hiddenExpiryTableBody"></tbody>
             </table>
         </div>
     </div>
@@ -260,30 +280,51 @@
 
     function renderData(data) {
         const users = Object.entries(data);
-        let fCount = 0, aCount = 0, tableHTML = "", cardsHTML = "";
+        let fCount = 0, aCount = 0, tableHTML = "", hiddenTableHTML = "", cardsHTML = "", hiddenUsersCount = 0;
         const today = new Date();
 
         users.forEach(([userId, user]) => {
             let fExp = false, aExp = false;
             if(user.lastFilterDate) {
                 let d = new Date(user.lastFilterDate); d.setMonth(d.getMonth() + 3);
-                if(today > d) { fExp = true; fCount++; }
+                if(today > d) { fExp = true; }
             }
             if(user.lastAMCDate) {
                 let d = new Date(user.lastAMCDate); d.setFullYear(d.getFullYear() + 1);
-                if(today > d) { aExp = true; aCount++; }
+                if(today > d) { aExp = true; }
             }
 
             if(fExp || aExp) {
-                tableHTML += `<tr>
-                    <td><b>${user.name || 'Unknown'}</b></td>
-                    <td style="color:var(--danger); font-size:10px; font-weight:bold;">
-                        ${fExp ? '● FILTER' : ''} ${aExp ? '● AMC' : ''}
-                    </td>
-                    <td><input type="date" id="ef-${userId}" value="${user.lastFilterDate || ''}"></td>
-                    <td><input type="date" id="ea-${userId}" value="${user.lastAMCDate || ''}"></td>
-                    <td><button class="save-btn" data-id="${userId}">Save</button></td>
-                </tr>`;
+                if(user.isIgnored) {
+                    hiddenUsersCount++;
+                    hiddenTableHTML += `<tr>
+                        <td><b>${user.name || 'Unknown'}</b></td>
+                        <td style="color:var(--text-sub); font-size:10px; font-weight:bold;">
+                            ${fExp ? '● FILTER' : ''} ${aExp ? '● AMC' : ''}
+                        </td>
+                        <td><input type="date" id="ef-${userId}" value="${user.lastFilterDate || ''}"></td>
+                        <td><input type="date" id="ea-${userId}" value="${user.lastAMCDate || ''}"></td>
+                        <td>
+                            <button class="save-btn" data-id="${userId}">Save</button>
+                            <button class="unhide-btn" data-id="${userId}">Unhide</button>
+                        </td>
+                    </tr>`;
+                } else {
+                    if(fExp) fCount++;
+                    if(aExp) aCount++;
+                    tableHTML += `<tr>
+                        <td><b>${user.name || 'Unknown'}</b></td>
+                        <td style="color:var(--danger); font-size:10px; font-weight:bold;">
+                            ${fExp ? '● FILTER' : ''} ${aExp ? '● AMC' : ''}
+                        </td>
+                        <td><input type="date" id="ef-${userId}" value="${user.lastFilterDate || ''}"></td>
+                        <td><input type="date" id="ea-${userId}" value="${user.lastAMCDate || ''}"></td>
+                        <td>
+                            <button class="save-btn" data-id="${userId}">Save</button>
+                            <button class="hide-btn" data-id="${userId}">Hide</button>
+                        </td>
+                    </tr>`;
+                }
             }
 
             cardsHTML += `<div class="user-card">
@@ -298,13 +339,36 @@
         document.getElementById("userList").innerHTML = cardsHTML;
 
         const urgentSection = document.getElementById("urgentSection");
-        if(tableHTML) {
+        const toggleBtn = document.getElementById("toggleHiddenBtn");
+
+        if(tableHTML || hiddenTableHTML) {
             urgentSection.style.display = "block";
             document.getElementById("expiryTableBody").innerHTML = tableHTML;
+            document.getElementById("hiddenExpiryTableBody").innerHTML = hiddenTableHTML;
+
+            if(hiddenUsersCount > 0) {
+                toggleBtn.style.display = "block";
+                toggleBtn.innerText = `👁️ Show Hidden Users (${hiddenUsersCount})`;
+            } else {
+                toggleBtn.style.display = "none";
+                document.getElementById("hiddenTableWrapper").style.display = "none";
+            }
         } else {
             urgentSection.style.display = "none";
         }
     }
+
+    window.toggleHiddenTable = () => {
+        const wrapper = document.getElementById("hiddenTableWrapper");
+        const btn = document.getElementById("toggleHiddenBtn");
+        if(wrapper.style.display === "none") {
+            wrapper.style.display = "block";
+            btn.innerText = btn.innerText.replace("Show", "Hide");
+        } else {
+            wrapper.style.display = "none";
+            btn.innerText = btn.innerText.replace("Hide", "Show");
+        }
+    };
 
     document.addEventListener('click', async (e) => {
         if(e.target.classList.contains('save-btn')) {
@@ -319,6 +383,30 @@
                 alert("Updated Successfully!");
             } catch (err) { 
                 alert("Failed!"); 
+                loader.style.display = "none";
+            }
+        }
+
+        if(e.target.classList.contains('hide-btn')) {
+            const id = e.target.dataset.id;
+            loader.style.display = "inline-block";
+            try {
+                await update(ref(db, `users/${id}`), { isIgnored: true });
+                await loadAdminData();
+            } catch (err) {
+                alert("Hide Failed!");
+                loader.style.display = "none";
+            }
+        }
+
+        if(e.target.classList.contains('unhide-btn')) {
+            const id = e.target.dataset.id;
+            loader.style.display = "inline-block";
+            try {
+                await update(ref(db, `users/${id}`), { isIgnored: false });
+                await loadAdminData();
+            } catch (err) {
+                alert("Unhide Failed!");
                 loader.style.display = "none";
             }
         }
