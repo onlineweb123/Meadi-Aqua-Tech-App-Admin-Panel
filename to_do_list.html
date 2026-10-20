@@ -597,8 +597,13 @@
             return;
         }
 
-        // Sort by order index
-        tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Sort by completion status first (uncompleted first, completed last), then by order
+        tasks.sort((a, b) => {
+            if (a.completed !== b.completed) {
+                return a.completed ? 1 : -1;
+            }
+            return (a.order || 0) - (b.order || 0);
+        });
 
         tasks.forEach((task) => renderTask(task));
     });
@@ -676,7 +681,10 @@
     }
 
     function toggleComplete(key, status) {
-        todoRef.child(key).update({ completed: status });
+        todoRef.child(key).update({ 
+            completed: status,
+            order: Date.now() // updates order so it moves to bottom/top based on state
+        });
     }
 
     function deleteTask(key) {
