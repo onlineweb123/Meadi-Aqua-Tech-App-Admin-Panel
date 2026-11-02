@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EMI Tracker - Meadi Admin</title>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <!-- html2canvas for Receipt Download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
         :root {
             --primary: #4f46e5;
@@ -25,10 +29,19 @@
             --border-color: #e2e8f0;
         }
 
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-        body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 90px; }
-        
-        /* Modern Sharp Header */
+        * {
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding-bottom: 90px;
+        }
+
         .app-header {
             background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
             color: white;
@@ -37,86 +50,443 @@
             box-shadow: 0 4px 20px rgba(79, 70, 229, 0.2);
             margin-bottom: 20px;
         }
-        .app-header h1 { font-size: 1.4em; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
-        .app-header p { text-align: center; font-size: 0.85em; opacity: 0.85; margin-top: 6px; font-weight: 400; }
 
-        .container { max-width: 600px; margin: 0 auto; padding: 0 16px; }
-        
-        /* Search Bar */
-        .search-box { 
-            width: 100%; 
-            padding: 14px 18px; 
+        .app-header h1 {
+            font-size: 1.4em;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .app-header p {
+            text-align: center;
+            font-size: 0.85em;
+            opacity: 0.85;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* Main EMI Search */
+        .search-box {
+            width: 100%;
+            padding: 14px 18px;
             background: var(--card-bg);
-            border: 1px solid var(--border-color); 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            font-size: 0.95em; 
-            outline: none; 
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            outline: none;
             box-shadow: 0 2px 6px rgba(0,0,0,0.02);
             transition: all 0.3s ease;
         }
-        .search-box:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
 
-        /* Card Design */
-        .card { 
-            background: var(--card-bg); 
-            border-radius: 16px; 
-            padding: 20px; 
-            margin-bottom: 16px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.04); 
+        .search-box:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
             border: 1px solid var(--border-color);
             transition: transform 0.2s ease;
         }
-        .card:hover { transform: translateY(-2px); }
-        
-        .card-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 1.1em; color: var(--primary); margin-bottom: 12px; align-items: center; }
-        .card-header a { background: #e0e7ff; color: var(--primary); padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 0.8em; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        
-        .card-detail { font-size: 0.9em; color: var(--text-muted); margin: 6px 0; display: flex; justify-content: space-between; }
-        .card-detail span { font-weight: 600; color: var(--text-main); }
-        .due-text { color: var(--danger) !important; }
-        .paid-text { color: var(--success) !important; }
-        
-        .status-badge { display: inline-block; padding: 6px 14px; border-radius: 30px; font-size: 0.75em; font-weight: 700; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .badge-active { background: #fef3c7; color: #d97706; }
-        .badge-finished { background: #d1fae5; color: #065f46; }
-        
-        /* Payment History Box */
-        .history-box { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border-color); font-size: 0.85em; }
-        .history-title { font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
-        .history-item { display: flex; justify-content: space-between; align-items: center; color: var(--text-main); margin: 6px 0; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #f1f5f9; }
-        .history-actions { display: flex; gap: 8px; }
 
-        .card-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-        .btn-small { padding: 8px 14px; font-size: 0.82em; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 4px; }
-        .btn-small:active { opacity: 0.8; }
-        .btn-pay { background: var(--success); color: white; }
-        .btn-edit { background: var(--warning); color: #fff; }
-        .btn-receipt { background: #0284c7; color: white; }
-        .btn-delete { background: var(--danger); color: white; margin-left: auto; }
-        .btn-icon { background: none; border: none; cursor: pointer; font-size: 0.95em; padding: 2px; }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 1.1em;
+            color: var(--primary);
+            margin-bottom: 12px;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .card-header a {
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.8em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-detail {
+            font-size: 0.9em;
+            color: var(--text-muted);
+            margin: 6px 0;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .card-detail span {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .due-text {
+            color: var(--danger) !important;
+        }
+
+        .paid-text {
+            color: var(--success) !important;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.75em;
+            font-weight: 700;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-active {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge-finished {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Payment History */
+        .history-box {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border-color);
+            font-size: 0.85em;
+        }
+
+        .history-title {
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+            margin: 6px 0;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 8px 14px;
+            font-size: 0.82em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-small:active {
+            opacity: 0.8;
+        }
+
+        .btn-pay {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-edit {
+            background: var(--warning);
+            color: #fff;
+        }
+
+        .btn-receipt {
+            background: #0284c7;
+            color: white;
+        }
+
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+            margin-left: auto;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95em;
+            padding: 2px;
+        }
 
         /* Floating Action Button */
-        .fab { position: fixed; bottom: 24px; right: 24px; width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4); border: none; cursor: pointer; z-index: 900; transition: transform 0.2s; }
-        .fab:active { transform: scale(0.95); }
-        
-        /* Modal Popup */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
-        .modal-content { background: var(--card-bg); padding: 24px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); animation: modalIn 0.2s ease; }
-        @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        
-        .modal-content h3 { margin-bottom: 16px; color: var(--text-main); font-size: 1.2em; font-weight: 700; }
-        .input-group { margin-bottom: 14px; }
-        .input-group label { display: block; font-size: 0.85em; margin-bottom: 6px; color: var(--text-muted); font-weight: 600; }
-        .input-group input { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 0.95em; outline: none; background: #f8fafc; transition: border-color 0.2s; }
-        .input-group input:focus { border-color: var(--primary); background: #fff; }
-        
-        .btn-container { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.9em; transition: opacity 0.2s; }
-        .btn-primary { background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; min-width: 90px; }
-        .btn-secondary { background: #e2e8f0; color: var(--text-muted); }
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+            border: none;
+            cursor: pointer;
+            z-index: 900;
+            transition: transform 0.2s;
+        }
 
-        /* Spinner Component */
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            animation: modalIn 0.2s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes modalIn {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+            color: var(--text-main);
+            font-size: 1.2em;
+            font-weight: 700;
+        }
+
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85em;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.95em;
+            outline: none;
+            background: #f8fafc;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            border-color: var(--primary);
+            background: #fff;
+        }
+
+        /* NEW: User Search Results */
+        .user-search-hint {
+            font-size: 0.78em;
+            color: var(--text-muted);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+
+        .user-search-results {
+            display: none;
+            margin-top: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .user-result-item {
+            width: 100%;
+            display: block;
+            padding: 12px;
+            border: none;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fff;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .user-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-result-item:hover,
+        .user-result-item:focus {
+            background: #eef2ff;
+            outline: none;
+        }
+
+        .user-result-name {
+            display: block;
+            font-weight: 700;
+            font-size: 0.9em;
+            color: var(--text-main);
+            overflow-wrap: anywhere;
+        }
+
+        .user-result-meta {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.78em;
+            color: var(--text-muted);
+            overflow-wrap: anywhere;
+        }
+
+        .user-search-empty {
+            padding: 14px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85em;
+        }
+
+        .selected-user-info {
+            display: none;
+            padding: 10px 12px;
+            margin-top: 8px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 10px;
+            font-size: 0.82em;
+            color: #065f46;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .user-search-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-clear-user {
+            border: none;
+            background: transparent;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            padding: 5px 0;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 90px;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text-muted);
+        }
+
+        /* Spinner */
         .spinner {
             width: 18px;
             height: 18px;
@@ -126,9 +496,19 @@
             animation: spin 0.6s linear infinite;
             display: inline-block;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .loading-container { text-align: center; padding: 40px; color: var(--text-muted); }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-container {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
         .loading-spinner {
             width: 36px;
             height: 36px;
@@ -139,27 +519,39 @@
             margin: 0 auto 12px auto;
         }
 
-        /* Hidden A4 Receipt Area for Rendering Image */
+        /* Receipt Rendering Area */
         #receipt-render-area {
             position: absolute;
             left: -9999px;
             top: -9999px;
-            width: 794px; /* Standard A4 Width at 96 DPI */
-            min-height: 1123px; /* Standard A4 Height */
+            width: 794px;
+            min-height: 1123px;
             background: #ffffff;
             color: #1e293b;
             padding: 40px;
             box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
+
         .receipt-header {
             text-align: center;
             border-bottom: 2px solid #4f46e5;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
-        .receipt-header h2 { font-size: 28px; color: #4f46e5; font-weight: 700; }
-        .receipt-header p { font-size: 14px; color: #64748b; margin-top: 4px; }
+
+        .receipt-header h2 {
+            font-size: 28px;
+            color: #4f46e5;
+            font-weight: 700;
+        }
+
+        .receipt-header p {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
         .receipt-section-title {
             font-size: 16px;
             font-weight: 700;
@@ -168,26 +560,46 @@
             padding-bottom: 6px;
             margin: 24px 0 12px 0;
         }
+
         .receipt-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
             font-size: 14px;
         }
-        .receipt-grid label { font-weight: 600; color: #64748b; display: block; font-size: 12px; }
-        .receipt-grid span { font-weight: 600; font-size: 15px; }
+
+        .receipt-grid label {
+            font-weight: 600;
+            color: #64748b;
+            display: block;
+            font-size: 12px;
+        }
+
+        .receipt-grid span {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
         .receipt-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
             font-size: 14px;
         }
-        .receipt-table th, .receipt-table td {
+
+        .receipt-table th,
+        .receipt-table td {
             border: 1px solid #e2e8f0;
             padding: 10px 14px;
             text-align: left;
         }
-        .receipt-table th { background: #f8fafc; color: #475569; font-weight: 600; }
+
+        .receipt-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+        }
+
         .receipt-footer {
             margin-top: 60px;
             text-align: center;
@@ -198,17 +610,25 @@
         }
     </style>
 </head>
+
 <body>
 
-    <!-- Header Section (Sharp & Modern) -->
+    <!-- Header -->
     <header class="app-header">
         <h1>EMI Management Tracker</h1>
         <p>Meadi Aqua Tech - Admin Control</p>
     </header>
 
     <div class="container">
-        <!-- Search Bar -->
-        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search by Customer Name or Phone..." onkeyup="filterCustomers()">
+
+        <!-- Main EMI Record Search -->
+        <input
+            type="text"
+            id="searchInput"
+            class="search-box"
+            placeholder="🔍 Search EMI by Name, Username or Phone..."
+            oninput="filterCustomers()"
+        >
 
         <div id="emi-list">
             <div class="loading-container">
@@ -216,6 +636,7 @@
                 <p>Loading records...</p>
             </div>
         </div>
+
     </div>
 
     <!-- Floating Action Button -->
@@ -224,73 +645,219 @@
     <!-- Add/Edit Customer EMI Modal -->
     <div class="modal" id="addModal">
         <div class="modal-content">
+
             <h3 id="modalTitle">Add New Customer EMI</h3>
+
             <input type="hidden" id="editCustKey">
+
+            <!-- NEW: Search App Users -->
+            <div class="input-group">
+
+                <label>Search App User (Optional)</label>
+
+                <input
+                    type="search"
+                    id="userSearchInput"
+                    placeholder="🔍 Enter Name, Username or Phone Number..."
+                    autocomplete="off"
+                    oninput="searchAppUsers()"
+                    onfocus="searchAppUsers()"
+                >
+
+                <div class="user-search-hint">
+                    Search using the customer's Name, App Username or Phone Number.
+                    Select the correct user from the results.
+                </div>
+
+                <!-- Search Results -->
+                <div
+                    id="userSearchResults"
+                    class="user-search-results"
+                ></div>
+
+                <!-- Selected User Information -->
+                <div
+                    id="selectedUserInfo"
+                    class="selected-user-info"
+                ></div>
+
+                <div class="user-search-actions">
+
+                    <span
+                        id="userSearchCount"
+                        style="font-size:0.78em;color:#64748b;"
+                    ></span>
+
+                    <button
+                        type="button"
+                        class="btn-clear-user"
+                        onclick="clearSelectedUser()"
+                    >
+                        Clear / Manual Entry
+                    </button>
+
+                </div>
+
+                <!--
+                    Hidden-compatible selection field.
+                    Existing save/edit functionality uses this field.
+                -->
+                <select id="userSelectDropdown" onchange="onUserSelected()" style="display:none;">
+                    <option value="">-- Manual Entry / No App User --</option>
+                </select>
+
+            </div>
+
             <div class="input-group">
                 <label>Customer Name *</label>
-                <input type="text" id="custName" placeholder="Enter customer name">
+                <input
+                    type="text"
+                    id="custName"
+                    placeholder="Enter customer name"
+                >
             </div>
+
             <div class="input-group">
                 <label>Phone Number</label>
-                <input type="tel" id="custPhone" placeholder="Enter 10-digit number">
+                <input
+                    type="tel"
+                    id="custPhone"
+                    placeholder="Enter 10-digit number"
+                >
             </div>
+
             <div class="input-group">
                 <label>Total EMI Amount (₹) *</label>
-                <input type="number" id="totalAmount" placeholder="0">
+                <input
+                    type="number"
+                    id="totalAmount"
+                    placeholder="0"
+                >
             </div>
+
+            <div class="input-group">
+                <label>Monthly Installment Amount (₹) *</label>
+                <input
+                    type="number"
+                    id="monthlyAmount"
+                    placeholder="e.g. 1000"
+                >
+            </div>
+
             <div class="input-group" id="advanceGroup">
                 <label>Initial Advance Paid (₹)</label>
-                <input type="number" id="initialPaid" placeholder="0">
+                <input
+                    type="number"
+                    id="initialPaid"
+                    placeholder="0"
+                >
             </div>
+
             <div class="input-group" id="advanceDateGroup">
                 <label>Payment Date (Optional)</label>
-                <input type="date" id="initialDate">
+                <input
+                    type="date"
+                    id="initialDate"
+                >
             </div>
+
             <div class="btn-container">
-                <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
-                <button class="btn btn-primary" id="saveCustBtn" onclick="saveEMI()">Save Record</button>
+                <button class="btn btn-secondary" onclick="closeAddModal()">
+                    Cancel
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    id="saveCustBtn"
+                    onclick="saveEMI()"
+                >
+                    Save Record
+                </button>
             </div>
+
         </div>
     </div>
 
     <!-- Add/Edit Payment Installment Modal -->
     <div class="modal" id="payModal">
         <div class="modal-content">
+
             <h3 id="payModalTitle">Add Installment Payment</h3>
+
             <input type="hidden" id="payCustId">
             <input type="hidden" id="payPaymentId">
+
             <div class="input-group">
                 <label>Amount Paid (₹) *</label>
-                <input type="number" id="installmentAmount" placeholder="0">
+                <input
+                    type="number"
+                    id="installmentAmount"
+                    placeholder="0"
+                >
             </div>
+
             <div class="input-group">
                 <label>Payment Date (Optional)</label>
-                <input type="date" id="installmentDate">
+                <input
+                    type="date"
+                    id="installmentDate"
+                >
             </div>
+
             <div class="btn-container">
-                <button class="btn btn-secondary" onclick="closePayModal()">Cancel</button>
-                <button class="btn btn-primary" id="savePayBtn" onclick="submitPayment()">Submit</button>
+                <button class="btn btn-secondary" onclick="closePayModal()">
+                    Cancel
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    id="savePayBtn"
+                    onclick="submitPayment()"
+                >
+                    Submit
+                </button>
             </div>
+
         </div>
     </div>
 
-    <!-- Security PIN Modal for Deletion -->
+    <!-- Security PIN Modal -->
     <div class="modal" id="pinModal">
         <div class="modal-content">
+
             <h3>Enter Security PIN</h3>
+
             <input type="hidden" id="deleteCustKey">
+
             <div class="input-group">
                 <label>Enter 10-digit Security PIN</label>
-                <input type="number" id="securityPinInput" placeholder="Enter PIN">
+                <input
+                    type="password"
+                    id="securityPinInput"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="Enter PIN"
+                >
             </div>
+
             <div class="btn-container">
-                <button class="btn btn-secondary" onclick="closePinModal()">Cancel</button>
-                <button class="btn btn-primary" id="confirmDeleteBtn" onclick="verifyAndDelete()">Verify & Delete</button>
+                <button class="btn btn-secondary" onclick="closePinModal()">
+                    Cancel
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    id="confirmDeleteBtn"
+                    onclick="verifyAndDelete()"
+                >
+                    Verify & Delete
+                </button>
             </div>
+
         </div>
     </div>
 
-    <!-- Hidden Off-Screen Container for Receipt Image Generation -->
+    <!-- Receipt Rendering Area -->
     <div id="receipt-render-area"></div>
 
     <script>
@@ -300,337 +867,1101 @@
         const firebaseConfig = {
             databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com/"
         };
-        
+
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
+
         const db = firebase.database();
 
         let allRecords = [];
+        let systemUsers = {};
 
-        // Fetch & Render Records
-        db.ref('emi_list').on('value', (snapshot) => {
-            allRecords = [];
+        // ==========================================
+        // LOAD APP USERS
+        // ==========================================
+
+        db.ref('users').on('value', (snapshot) => {
+
+            systemUsers = {};
+
             if (snapshot.exists()) {
+
+                snapshot.forEach((childSnap) => {
+
+                    const uKey = childSnap.key;
+                    const uData = childSnap.val() || {};
+
+                    systemUsers[uKey] = uData;
+
+                });
+
+            }
+
+            // Refresh results if search is already active
+            const searchInput = document.getElementById('userSearchInput');
+
+            if (searchInput) {
+                searchAppUsers();
+            }
+
+            // Update selected user's information if still available
+            const selectedUsername =
+                document.getElementById('userSelectDropdown').value;
+
+            if (selectedUsername && systemUsers[selectedUsername]) {
+                showSelectedUser(systemUsers[selectedUsername], selectedUsername);
+            }
+
+        });
+
+
+        // ==========================================
+        // NEW: SEARCH APP USERS
+        // Name / Username / Phone Number
+        // ==========================================
+
+        function searchAppUsers() {
+
+            const input = document.getElementById('userSearchInput');
+            const resultsDiv = document.getElementById('userSearchResults');
+            const countDiv = document.getElementById('userSearchCount');
+
+            const query = input.value.trim().toLowerCase();
+
+            resultsDiv.innerHTML = '';
+            resultsDiv.style.display = 'block';
+
+            const users = Object.entries(systemUsers);
+
+            // Empty search: display users for selection
+            const filteredUsers = users.filter(([username, user]) => {
+
+                const name = String(user.name || '').toLowerCase();
+                const userName = String(username || '').toLowerCase();
+                const phone = String(user.phone || '').toLowerCase();
+
+                return (
+                    !query ||
+                    name.includes(query) ||
+                    userName.includes(query) ||
+                    phone.includes(query)
+                );
+
+            });
+
+            countDiv.textContent =
+                filteredUsers.length + ' user(s) found';
+
+            if (filteredUsers.length === 0) {
+
+                resultsDiv.innerHTML = `
+                    <div class="user-search-empty">
+                        No matching App Users found.
+                        <br>
+                        Try another Name, Username or Phone Number.
+                    </div>
+                `;
+
+                return;
+            }
+
+            filteredUsers.forEach(([username, user]) => {
+
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className = 'user-result-item';
+
+                const nameDiv = document.createElement('span');
+                nameDiv.className = 'user-result-name';
+                nameDiv.textContent = user.name || 'Name not available';
+
+                const metaDiv = document.createElement('span');
+                metaDiv.className = 'user-result-meta';
+
+                metaDiv.textContent =
+                    'Username: @' + username +
+                    ' | Phone: ' + (user.phone || 'Not available');
+
+                button.appendChild(nameDiv);
+                button.appendChild(metaDiv);
+
+                button.onclick = function () {
+                    selectAppUser(username);
+                };
+
+                resultsDiv.appendChild(button);
+
+            });
+
+        }
+
+
+        // ==========================================
+        // NEW: SELECT APP USER
+        // ==========================================
+
+        function selectAppUser(username) {
+
+            const user = systemUsers[username];
+
+            if (!user) {
+                alert('User not found. Please search again.');
+                return;
+            }
+
+            const dropdown =
+                document.getElementById('userSelectDropdown');
+
+            // Keep the selected user in the original selection field
+            dropdown.innerHTML = '';
+
+            const option = document.createElement('option');
+            option.value = username;
+            option.textContent =
+                (user.name || username) + ' (@' + username + ')';
+
+            dropdown.appendChild(option);
+            dropdown.value = username;
+
+            // Automatically fill Name and Phone
+            document.getElementById('custName').value =
+                user.name || '';
+
+            document.getElementById('custPhone').value =
+                user.phone || '';
+
+            // Show selected user's information
+            showSelectedUser(user, username);
+
+            // Update search field
+            document.getElementById('userSearchInput').value =
+                user.name || username;
+
+            // Close results after selecting
+            document.getElementById('userSearchResults').style.display =
+                'none';
+
+            document.getElementById('userSearchCount').textContent =
+                '1 user selected';
+
+        }
+
+
+        // ==========================================
+        // SHOW SELECTED USER
+        // ==========================================
+
+        function showSelectedUser(user, username) {
+
+            const info = document.getElementById('selectedUserInfo');
+
+            info.innerHTML = '';
+
+            const title = document.createElement('strong');
+            title.textContent = '✓ Selected App User';
+
+            const details = document.createElement('div');
+
+            details.textContent =
+                'Name: ' + (user.name || '-') +
+                ' | Username: @' + username +
+                ' | Phone: ' + (user.phone || '-');
+
+            info.appendChild(title);
+            info.appendChild(details);
+
+            info.style.display = 'block';
+
+        }
+
+
+        // ==========================================
+        // CLEAR USER / MANUAL ENTRY
+        // ==========================================
+
+        function clearSelectedUser() {
+
+            document.getElementById('userSelectDropdown').innerHTML =
+                '<option value="">-- Manual Entry / No App User --</option>';
+
+            document.getElementById('userSelectDropdown').value = '';
+
+            document.getElementById('userSearchInput').value = '';
+
+            document.getElementById('userSearchResults').innerHTML = '';
+
+            document.getElementById('userSearchResults').style.display =
+                'none';
+
+            document.getElementById('userSearchCount').textContent = '';
+
+            document.getElementById('selectedUserInfo').innerHTML = '';
+
+            document.getElementById('selectedUserInfo').style.display =
+                'none';
+
+            // Name and phone remain editable for manual entry
+            document.getElementById('custName').focus();
+
+        }
+
+
+        // ==========================================
+        // ORIGINAL USER SELECTION COMPATIBILITY
+        // ==========================================
+
+        function onUserSelected() {
+
+            const selectedUsername =
+                document.getElementById('userSelectDropdown').value;
+
+            if (selectedUsername && systemUsers[selectedUsername]) {
+
+                const user = systemUsers[selectedUsername];
+
+                document.getElementById('custName').value =
+                    user.name || '';
+
+                document.getElementById('custPhone').value =
+                    user.phone || '';
+
+                showSelectedUser(user, selectedUsername);
+
+            }
+
+        }
+
+
+        // ==========================================
+        // LOAD EMI RECORDS
+        // ==========================================
+
+        db.ref('emi_list').on('value', (snapshot) => {
+
+            allRecords = [];
+
+            if (snapshot.exists()) {
+
                 snapshot.forEach((child) => {
+
                     allRecords.push({
                         key: child.key,
                         ...child.val()
                     });
+
                 });
+
             }
-            renderList(allRecords);
+
+            filterCustomers();
+
         });
 
+
+        // ==========================================
+        // RENDER EMI RECORDS
+        // ==========================================
+
         function renderList(records) {
+
             const listDiv = document.getElementById('emi-list');
+
             listDiv.innerHTML = '';
 
             if (records.length === 0) {
-                listDiv.innerHTML = '<p style="text-align:center; color:#64748b; margin-top:30px; font-weight: 500;">No EMI records found.</p>';
+
+                listDiv.innerHTML = `
+                    <p style="text-align:center;color:#64748b;margin-top:30px;font-weight:500;">
+                        No EMI records found.
+                    </p>
+                `;
+
                 return;
             }
 
             records.forEach((data) => {
+
                 const key = data.key;
+
                 const total = parseFloat(data.totalAmount || 0);
-                
+                const monthly = parseFloat(data.monthlyAmount || 0);
+
                 let paidSum = 0;
                 let historyHtml = '';
-                
+
                 if (data.payments) {
+
                     Object.entries(data.payments).forEach(([payKey, p]) => {
+
                         const amt = parseFloat(p.amount || 0);
+
                         paidSum += amt;
-                        const displayDate = p.date ? new Date(p.date).toLocaleDateString('en-GB') : '';
-                        
+
+                        const displayDate = p.date
+                            ? new Date(p.date).toLocaleDateString('en-GB')
+                            : '';
+
                         historyHtml += `
                             <div class="history-item">
-                                <span><strong>₹${amt}</strong> <small style="color:#64748b;">(${displayDate})</small></span>
+
+                                <span>
+                                    <strong>₹${amt}</strong>
+                                    <small style="color:#64748b;">
+                                        (${displayDate})
+                                    </small>
+                                </span>
+
                                 <div class="history-actions">
-                                    <button class="btn-icon" title="Edit Payment" onclick="openEditPaymentModal('${key}', '${payKey}', ${amt}, '${p.date || ''}')">✏️</button>
-                                    <button class="btn-icon" title="Delete Payment" onclick="deleteSinglePayment('${key}', '${payKey}')">❌</button>
+
+                                    <button
+                                        class="btn-icon"
+                                        title="Edit Payment"
+                                        onclick="openEditPaymentModal('${key}','${payKey}',${amt},'${p.date || ''}')"
+                                    >✏️</button>
+
+                                    <button
+                                        class="btn-icon"
+                                        title="Delete Payment"
+                                        onclick="deleteSinglePayment('${key}','${payKey}')"
+                                    >❌</button>
+
                                 </div>
-                            </div>`;
+
+                            </div>
+                        `;
+
                     });
+
                 }
 
                 const balance = total - paidSum;
                 const isFinished = balance <= 0;
 
                 const card = document.createElement('div');
+
                 card.className = 'card';
+
                 card.innerHTML = `
+
                     <div class="card-header">
-                        <span>${data.name}</span>
-                        ${data.phone ? `<a href="tel:${data.phone}">📞 ${data.phone}</a>` : ''}
+
+                        <span>
+                            ${escapeHTML(data.name || '')}
+
+                            ${data.username
+                                ? `<small style="color:#6366f1;">(@${escapeHTML(data.username)})</small>`
+                                : ''
+                            }
+                        </span>
+
+                        ${data.phone
+                            ? `<a href="tel:${escapeHTML(data.phone)}">📞 ${escapeHTML(data.phone)}</a>`
+                            : ''
+                        }
+
                     </div>
-                    <div class="card-detail">Total Amount: <span>₹${total}</span></div>
-                    <div class="card-detail">Total Paid: <span class="paid-text">₹${paidSum}</span></div>
-                    <div class="card-detail">Balance Due: <span class="due-text">₹${balance > 0 ? balance : 0}</span></div>
+
+                    <div class="card-detail">
+                        Total Amount:
+                        <span>₹${total}</span>
+                    </div>
+
+                    ${monthly > 0
+                        ? `<div class="card-detail">
+                            Monthly Installment:
+                            <span>₹${monthly}</span>
+                        </div>`
+                        : ''
+                    }
+
+                    <div class="card-detail">
+                        Total Paid:
+                        <span class="paid-text">₹${paidSum}</span>
+                    </div>
+
+                    <div class="card-detail">
+                        Balance Due:
+                        <span class="due-text">₹${balance > 0 ? balance : 0}</span>
+                    </div>
+
                     <div>
                         <span class="status-badge ${isFinished ? 'badge-finished' : 'badge-active'}">
                             ${isFinished ? 'Finished' : 'Active Status'}
                         </span>
                     </div>
 
-                    ${historyHtml ? `<div class="history-box"><div class="history-title">Payment History</div>${historyHtml}</div>` : ''}
+                    ${historyHtml
+                        ? `<div class="history-box">
+                            <div class="history-title">Payment History</div>
+                            ${historyHtml}
+                        </div>`
+                        : ''
+                    }
 
                     <div class="card-actions">
-                        ${!isFinished ? `<button class="btn-small btn-pay" onclick="openPayModal('${key}')">+ Add Payment</button>` : ''}
-                        <button class="btn-small btn-edit" onclick="openEditModal('${key}')">Edit Customer</button>
-                        <button class="btn-small btn-receipt" id="btn-receipt-${key}" onclick="downloadReceipt('${key}')">🧾 Receipt</button>
-                        <button class="btn-small btn-delete" onclick="promptDeleteCustomer('${key}')">Delete</button>
+
+                        ${!isFinished
+                            ? `<button class="btn-small btn-pay" onclick="openPayModal('${key}')">
+                                + Add Payment
+                            </button>`
+                            : ''
+                        }
+
+                        <button
+                            class="btn-small btn-edit"
+                            onclick="openEditModal('${key}')"
+                        >
+                            Edit Customer
+                        </button>
+
+                        <button
+                            class="btn-small btn-receipt"
+                            id="btn-receipt-${key}"
+                            onclick="downloadReceipt('${key}')"
+                        >
+                            🧾 Receipt
+                        </button>
+
+                        <button
+                            class="btn-small btn-delete"
+                            onclick="promptDeleteCustomer('${key}')"
+                        >
+                            Delete
+                        </button>
+
                     </div>
+
                 `;
+
                 listDiv.appendChild(card);
+
             });
+
         }
 
-        // Search Filter
-        function filterCustomers() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            const filtered = allRecords.filter(item => {
-                const name = (item.name || '').toLowerCase();
-                const phone = (item.phone || '').toLowerCase();
-                return name.includes(query) || phone.includes(query);
+
+        // ==========================================
+        // HTML ESCAPE HELPER
+        // ==========================================
+
+        function escapeHTML(value) {
+
+            return String(value).replace(/[&<>"']/g, function (char) {
+
+                const entities = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                };
+
+                return entities[char];
+
             });
-            renderList(filtered);
+
         }
+
+
+        // ==========================================
+        // SEARCH EMI RECORDS
+        // Name / Username / Phone
+        // ==========================================
+
+        function filterCustomers() {
+
+            const query = document
+                .getElementById('searchInput')
+                .value
+                .toLowerCase()
+                .trim();
+
+            const filtered = allRecords.filter(item => {
+
+                const name = String(item.name || '').toLowerCase();
+
+                const phone = String(item.phone || '').toLowerCase();
+
+                const username = String(item.username || '').toLowerCase();
+
+                return (
+                    name.includes(query) ||
+                    phone.includes(query) ||
+                    username.includes(query)
+                );
+
+            });
+
+            renderList(filtered);
+
+        }
+
+
+        // ==========================================
+        // OPEN ADD EMI MODAL
+        // ==========================================
 
         function openAddModal() {
+
             document.getElementById('editCustKey').value = '';
-            document.getElementById('modalTitle').innerText = 'Add New Customer EMI';
+
+            document.getElementById('modalTitle').innerText =
+                'Add New Customer EMI';
+
+            document.getElementById('userSelectDropdown').innerHTML =
+                '<option value="">-- Manual Entry / No App User --</option>';
+
+            document.getElementById('userSearchInput').value = '';
+
+            document.getElementById('userSearchResults').innerHTML = '';
+
+            document.getElementById('userSearchResults').style.display =
+                'none';
+
+            document.getElementById('userSearchCount').textContent = '';
+
+            document.getElementById('selectedUserInfo').innerHTML = '';
+
+            document.getElementById('selectedUserInfo').style.display =
+                'none';
+
             document.getElementById('custName').value = '';
+
             document.getElementById('custPhone').value = '';
+
             document.getElementById('totalAmount').value = '';
+
+            document.getElementById('monthlyAmount').value = '';
+
             document.getElementById('initialPaid').value = '';
+
             document.getElementById('initialDate').value = '';
+
             document.getElementById('advanceGroup').style.display = 'block';
+
             document.getElementById('advanceDateGroup').style.display = 'block';
+
             document.getElementById('addModal').style.display = 'flex';
+
+            // Show available App Users immediately
+            searchAppUsers();
+
         }
 
+
+        // ==========================================
+        // OPEN EDIT CUSTOMER MODAL
+        // ==========================================
+
         function openEditModal(key) {
+
             const customer = allRecords.find(r => r.key === key);
+
             if (!customer) return;
 
             document.getElementById('editCustKey').value = key;
-            document.getElementById('modalTitle').innerText = 'Edit Customer Details';
-            document.getElementById('custName').value = customer.name || '';
-            document.getElementById('custPhone').value = customer.phone || '';
-            document.getElementById('totalAmount').value = customer.totalAmount || '';
+
+            document.getElementById('modalTitle').innerText =
+                'Edit Customer Details';
+
+            document.getElementById('custName').value =
+                customer.name || '';
+
+            document.getElementById('custPhone').value =
+                customer.phone || '';
+
+            document.getElementById('totalAmount').value =
+                customer.totalAmount || '';
+
+            document.getElementById('monthlyAmount').value =
+                customer.monthlyAmount || '';
+
             document.getElementById('advanceGroup').style.display = 'none';
+
             document.getElementById('advanceDateGroup').style.display = 'none';
+
+            // Restore selected App User if available
+            const username = customer.username || '';
+
+            if (username && systemUsers[username]) {
+
+                selectAppUser(username);
+
+            } else {
+
+                document.getElementById('userSelectDropdown').innerHTML =
+                    '<option value="">-- Manual Entry / No App User --</option>';
+
+                document.getElementById('userSearchInput').value =
+                    username;
+
+                document.getElementById('selectedUserInfo').style.display =
+                    'none';
+
+                document.getElementById('userSearchResults').style.display =
+                    'none';
+
+            }
+
+            // Restore saved customer values after user selection
+            // so the existing record's details remain editable.
+            document.getElementById('custName').value =
+                customer.name || '';
+
+            document.getElementById('custPhone').value =
+                customer.phone || '';
+
             document.getElementById('addModal').style.display = 'flex';
+
         }
 
-        function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
+
+        // ==========================================
+        // CLOSE ADD MODAL
+        // ==========================================
+
+        function closeAddModal() {
+
+            document.getElementById('addModal').style.display = 'none';
+
+        }
+
+
+        // ==========================================
+        // OPEN ADD PAYMENT MODAL
+        // ==========================================
 
         function openPayModal(key) {
+
             document.getElementById('payCustId').value = key;
+
             document.getElementById('payPaymentId').value = '';
-            document.getElementById('payModalTitle').innerText = 'Add Installment Payment';
+
+            document.getElementById('payModalTitle').innerText =
+                'Add Installment Payment';
+
             document.getElementById('installmentAmount').value = '';
+
             document.getElementById('installmentDate').value = '';
+
             document.getElementById('payModal').style.display = 'flex';
+
         }
 
-        function openEditPaymentModal(custKey, payKey, currentAmount, currentDate) {
+
+        // ==========================================
+        // EDIT PAYMENT MODAL
+        // ==========================================
+
+        function openEditPaymentModal(
+            custKey,
+            payKey,
+            currentAmount,
+            currentDate
+        ) {
+
             document.getElementById('payCustId').value = custKey;
+
             document.getElementById('payPaymentId').value = payKey;
-            document.getElementById('payModalTitle').innerText = 'Edit Installment Payment';
-            document.getElementById('installmentAmount').value = currentAmount;
-            
+
+            document.getElementById('payModalTitle').innerText =
+                'Edit Installment Payment';
+
+            document.getElementById('installmentAmount').value =
+                currentAmount;
+
             if (currentDate) {
+
                 const d = new Date(currentDate);
+
                 const dateStr = d.toISOString().split('T')[0];
+
                 document.getElementById('installmentDate').value = dateStr;
+
             } else {
+
                 document.getElementById('installmentDate').value = '';
+
             }
+
             document.getElementById('payModal').style.display = 'flex';
+
         }
 
-        function closePayModal() { document.getElementById('payModal').style.display = 'none'; }
+
+        // ==========================================
+        // CLOSE PAYMENT MODAL
+        // ==========================================
+
+        function closePayModal() {
+
+            document.getElementById('payModal').style.display = 'none';
+
+        }
+
+
+        // ==========================================
+        // DATE HELPER
+        // ==========================================
 
         function getSelectedOrCurrentDate(dateInputId) {
+
             const val = document.getElementById(dateInputId).value;
+
             if (val) {
                 return new Date(val).toISOString();
             }
+
             return new Date().toISOString();
+
         }
 
-        // Save / Update EMI Record with Spinner Animation
+
+        // ==========================================
+        // SAVE / UPDATE EMI RECORD
+        // ==========================================
+
         function saveEMI() {
+
             const editKey = document.getElementById('editCustKey').value;
-            const name = document.getElementById('custName').value.trim();
-            const phone = document.getElementById('custPhone').value.trim();
-            const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+
+            const username =
+                document.getElementById('userSelectDropdown').value;
+
+            const name =
+                document.getElementById('custName').value.trim();
+
+            const phone =
+                document.getElementById('custPhone').value.trim();
+
+            const totalAmount =
+                parseFloat(document.getElementById('totalAmount').value);
+
+            const monthlyAmount =
+                parseFloat(document.getElementById('monthlyAmount').value || 0);
 
             if (!name || isNaN(totalAmount) || totalAmount <= 0) {
+
                 alert('Please enter valid Name and Total Amount!');
+
                 return;
+
             }
 
             const btn = document.getElementById('saveCustBtn');
+
             const originalText = btn.innerHTML;
+
             btn.innerHTML = '<div class="spinner"></div>';
+
             btn.disabled = true;
 
+            const payload = {
+                name: name,
+                username: username,
+                phone: phone,
+                totalAmount: totalAmount,
+                monthlyAmount: monthlyAmount
+            };
+
             if (editKey) {
-                db.ref(`emi_list/${editKey}`).update({
-                    name: name,
-                    phone: phone,
-                    totalAmount: totalAmount
-                }).then(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    closeAddModal();
-                }).catch(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                });
+
+                db.ref(`emi_list/${editKey}`).update(payload)
+
+                    .then(() => {
+
+                        btn.innerHTML = originalText;
+
+                        btn.disabled = false;
+
+                        closeAddModal();
+
+                    })
+
+                    .catch((err) => {
+
+                        btn.innerHTML = originalText;
+
+                        btn.disabled = false;
+
+                        alert('Error updating record: ' + err.message);
+
+                    });
+
             } else {
-                const initialPaid = parseFloat(document.getElementById('initialPaid').value || 0);
+
+                const initialPaid =
+                    parseFloat(document.getElementById('initialPaid').value || 0);
+
                 const dateISO = getSelectedOrCurrentDate('initialDate');
 
                 const newRef = db.ref('emi_list').push();
-                const record = {
-                    name: name,
-                    phone: phone,
-                    totalAmount: totalAmount,
-                    createdAt: new Date().toISOString()
-                };
 
-                newRef.set(record).then(() => {
-                    if (initialPaid > 0) {
-                        newRef.child('payments').push({
-                            amount: initialPaid,
-                            date: dateISO
-                        });
-                    }
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    closeAddModal();
-                }).catch(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                });
+                payload.createdAt = new Date().toISOString();
+
+                newRef.set(payload)
+
+                    .then(() => {
+
+                        if (initialPaid > 0) {
+
+                            return newRef.child('payments').push({
+                                amount: initialPaid,
+                                date: dateISO
+                            });
+
+                        }
+
+                    })
+
+                    .then(() => {
+
+                        btn.innerHTML = originalText;
+
+                        btn.disabled = false;
+
+                        closeAddModal();
+
+                    })
+
+                    .catch((err) => {
+
+                        btn.innerHTML = originalText;
+
+                        btn.disabled = false;
+
+                        alert('Error saving record: ' + err.message);
+
+                    });
+
             }
+
         }
 
-        // Submit Payment with Spinner Animation
+
+        // ==========================================
+        // SUBMIT PAYMENT
+        // ==========================================
+
         function submitPayment() {
-            const custKey = document.getElementById('payCustId').value;
-            const payKey = document.getElementById('payPaymentId').value;
-            const amount = parseFloat(document.getElementById('installmentAmount').value);
-            const dateISO = getSelectedOrCurrentDate('installmentDate');
+
+            const custKey =
+                document.getElementById('payCustId').value;
+
+            const payKey =
+                document.getElementById('payPaymentId').value;
+
+            const amount =
+                parseFloat(document.getElementById('installmentAmount').value);
+
+            const dateISO =
+                getSelectedOrCurrentDate('installmentDate');
 
             if (isNaN(amount) || amount <= 0) {
+
                 alert('Please enter a valid payment amount!');
+
                 return;
+
             }
 
             const btn = document.getElementById('savePayBtn');
+
             const originalText = btn.innerHTML;
+
             btn.innerHTML = '<div class="spinner"></div>';
+
             btn.disabled = true;
 
+            let operation;
+
             if (payKey) {
-                db.ref(`emi_list/${custKey}/payments/${payKey}`).update({
-                    amount: amount,
-                    date: dateISO
-                }).then(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    closePayModal();
-                }).catch(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                });
+
+                operation = db
+                    .ref(`emi_list/${custKey}/payments/${payKey}`)
+                    .update({
+                        amount: amount,
+                        date: dateISO
+                    });
+
             } else {
-                db.ref(`emi_list/${custKey}/payments`).push({
-                    amount: amount,
-                    date: dateISO
-                }).then(() => {
+
+                operation = db
+                    .ref(`emi_list/${custKey}/payments`)
+                    .push({
+                        amount: amount,
+                        date: dateISO
+                    });
+
+            }
+
+            operation
+
+                .then(() => {
+
                     btn.innerHTML = originalText;
+
                     btn.disabled = false;
+
                     closePayModal();
-                }).catch(() => {
+
+                })
+
+                .catch((err) => {
+
                     btn.innerHTML = originalText;
+
                     btn.disabled = false;
+
+                    alert('Error saving payment: ' + err.message);
+
                 });
-            }
+
         }
 
-        // Delete Single Payment Entry
+
+        // ==========================================
+        // DELETE SINGLE PAYMENT
+        // ==========================================
+
         function deleteSinglePayment(custKey, payKey) {
-            if (confirm("Are you sure you want to delete this payment entry?")) {
-                db.ref(`emi_list/${custKey}/payments/${payKey}`).remove();
+
+            if (confirm('Are you sure you want to delete this payment entry?')) {
+
+                db.ref(`emi_list/${custKey}/payments/${payKey}`).remove()
+
+                    .catch((err) => {
+
+                        alert('Error deleting payment: ' + err.message);
+
+                    });
+
             }
+
         }
 
-        // Open PIN Modal for Deletion
+
+        // ==========================================
+        // OPEN DELETE PIN MODAL
+        // ==========================================
+
         function promptDeleteCustomer(key) {
+
             document.getElementById('deleteCustKey').value = key;
+
             document.getElementById('securityPinInput').value = '';
+
             document.getElementById('pinModal').style.display = 'flex';
+
         }
+
+
+        // ==========================================
+        // CLOSE PIN MODAL
+        // ==========================================
 
         function closePinModal() {
+
             document.getElementById('pinModal').style.display = 'none';
+
         }
 
-        // Verify PIN and Delete Customer with Spinner Animation
+
+        // ==========================================
+        // VERIFY PIN AND DELETE CUSTOMER
+        // ==========================================
+
         function verifyAndDelete() {
-            const key = document.getElementById('deleteCustKey').value;
-            const userInput = document.getElementById('securityPinInput').value.trim();
+
+            const key =
+                document.getElementById('deleteCustKey').value;
+
+            const userInput =
+                document.getElementById('securityPinInput').value.trim();
 
             if (userInput === DELETE_PIN) {
+
                 const btn = document.getElementById('confirmDeleteBtn');
+
                 const originalText = btn.innerHTML;
+
                 btn.innerHTML = '<div class="spinner"></div>';
+
                 btn.disabled = true;
 
                 db.ref(`emi_list/${key}`).remove()
+
                     .then(() => {
+
                         btn.innerHTML = originalText;
+
                         btn.disabled = false;
+
                         closePinModal();
-                        alert("Record deleted successfully.");
+
+                        alert('Record deleted successfully.');
+
                     })
+
                     .catch((err) => {
+
                         btn.innerHTML = originalText;
+
                         btn.disabled = false;
-                        alert("Error deleting record: " + err.message);
+
+                        alert('Error deleting record: ' + err.message);
+
                     });
+
             } else {
-                alert("Incorrect PIN! Delete access denied.");
+
+                alert('Incorrect PIN! Delete access denied.');
+
             }
+
         }
 
-        // Download Printable Receipt Image Function (A4 Size HD)
+
+        // ==========================================
+        // DOWNLOAD RECEIPT IMAGE
+        // ==========================================
+
         function downloadReceipt(key) {
+
             const customer = allRecords.find(r => r.key === key);
+
             if (!customer) return;
 
             const btn = document.getElementById(`btn-receipt-${key}`);
+
             const originalText = btn.innerHTML;
+
             btn.innerHTML = '<div class="spinner"></div>';
+
             btn.disabled = true;
 
             const total = parseFloat(customer.totalAmount || 0);
+
             let paidSum = 0;
+
             let rowsHtml = '';
+
             let index = 1;
 
             if (customer.payments) {
+
                 Object.values(customer.payments).forEach(p => {
+
                     const amt = parseFloat(p.amount || 0);
+
                     paidSum += amt;
-                    const dateStr = p.date ? new Date(p.date).toLocaleDateString('en-GB') : '-';
+
+                    const dateStr = p.date
+                        ? new Date(p.date).toLocaleDateString('en-GB')
+                        : '-';
+
                     rowsHtml += `
                         <tr>
                             <td>${index++}</td>
@@ -638,94 +1969,405 @@
                             <td>₹${amt}</td>
                         </tr>
                     `;
+
                 });
+
             }
 
             const balance = total - paidSum;
-            const currentDateStr = new Date().toLocaleDateString('en-GB');
 
-            const renderArea = document.getElementById('receipt-render-area');
+            const currentDateStr =
+                new Date().toLocaleDateString('en-GB');
+
+            const renderArea =
+                document.getElementById('receipt-render-area');
+
             renderArea.innerHTML = `
+
                 <div class="receipt-header">
+
                     <h2>Meadi Aqua Tech</h2>
-                    <p>Water Purifiers Sales, Service & Spare Parts | Cuddalore</p>
-                    <p style="margin-top: 8px; font-weight: 600; color: #1e293b;">OFFICIAL EMI PAYMENT STATEMENT</p>
+
+                    <p>
+                        Water Purifiers Sales, Service & Spare Parts | Cuddalore
+                    </p>
+
+                    <p style="margin-top:8px;font-weight:600;color:#1e293b;">
+                        OFFICIAL EMI PAYMENT STATEMENT
+                    </p>
+
                 </div>
 
-                <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-bottom: 20px;">
-                    <span>Date Generated: <strong>${currentDateStr}</strong></span>
-                    <span>Status: <strong style="color: ${balance <= 0 ? '#10b981' : '#d97706'};">${balance <= 0 ? 'COMPLETED' : 'ACTIVE'}</strong></span>
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:#64748b;margin-bottom:20px;">
+
+                    <span>
+                        Date Generated:
+                        <strong>${currentDateStr}</strong>
+                    </span>
+
+                    <span>
+                        Status:
+                        <strong style="color:${balance <= 0 ? '#10b981' : '#d97706'};">
+                            ${balance <= 0 ? 'COMPLETED' : 'ACTIVE'}
+                        </strong>
+                    </span>
+
                 </div>
 
-                <div class="receipt-section-title">Customer Information</div>
+                <div class="receipt-section-title">
+                    Customer Information
+                </div>
+
                 <div class="receipt-grid">
+
                     <div>
                         <label>Customer Name</label>
-                        <span>${customer.name || '-'}</span>
+                        <span>${escapeHTML(customer.name || '-')}</span>
                     </div>
+
                     <div>
                         <label>Phone Number</label>
-                        <span>${customer.phone || '-'}</span>
+                        <span>${escapeHTML(customer.phone || '-')}</span>
                     </div>
+
                 </div>
 
-                <div class="receipt-section-title">Payment Summary</div>
-                <div class="receipt-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="receipt-section-title">
+                    Payment Summary
+                </div>
+
+                <div class="receipt-grid" style="grid-template-columns:1fr 1fr 1fr;">
+
                     <div>
                         <label>Total EMI Amount</label>
                         <span>₹${total}</span>
                     </div>
+
                     <div>
                         <label>Total Paid</label>
-                        <span style="color: #10b981;">₹${paidSum}</span>
+                        <span style="color:#10b981;">₹${paidSum}</span>
                     </div>
+
                     <div>
                         <label>Balance Due</label>
-                        <span style="color: #ef4444;">₹${balance > 0 ? balance : 0}</span>
+                        <span style="color:#ef4444;">₹${balance > 0 ? balance : 0}</span>
                     </div>
+
                 </div>
 
-                <div class="receipt-section-title">Payment History Logs</div>
+                <div class="receipt-section-title">
+                    Payment History Logs
+                </div>
+
                 <table class="receipt-table">
+
                     <thead>
                         <tr>
-                            <th style="width: 10%;">#</th>
+                            <th style="width:10%;">#</th>
                             <th>Payment Date</th>
                             <th>Amount Paid</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         ${rowsHtml || '<tr><td colspan="3" style="text-align:center;">No payment entries recorded.</td></tr>'}
                     </tbody>
+
                 </table>
 
                 <div class="receipt-footer">
+
                     <p>Thank you for choosing Meadi Aqua Tech!</p>
-                    <p style="margin-top: 4px;">This is a computer-generated statement and does not require a physical signature.</p>
+
+                    <p style="margin-top:4px;">
+                        This is a computer-generated statement and does not require a physical signature.
+                    </p>
+
                 </div>
+
             `;
 
             setTimeout(() => {
+
                 html2canvas(renderArea, {
                     scale: 2,
-                    backgroundColor: "#ffffff",
+                    backgroundColor: '#ffffff',
                     useCORS: true
-                }).then(canvas => {
+                })
+
+                .then(canvas => {
+
                     const link = document.createElement('a');
-                    const formattedName = (customer.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
-                    link.download = `EMI_Receipt_${formattedName}.png`;
+
+                    const formattedName =
+                        (customer.name || 'Customer')
+                        .replace(/[^a-zA-Z0-9]/g, '_');
+
+                    link.download =
+                        `EMI_Receipt_${formattedName}.png`;
+
                     link.href = canvas.toDataURL('image/png');
+
                     link.click();
 
                     btn.innerHTML = originalText;
+
                     btn.disabled = false;
-                }).catch(err => {
+
+                })
+
+                .catch(err => {
+
                     alert('Error generating receipt image: ' + err.message);
+
                     btn.innerHTML = originalText;
+
                     btn.disabled = false;
+
                 });
+
             }, 300);
+
         }
+        
+        
+        
+        // ==========================================
+// DUPLICATE CUSTOMER CHECK
+// Checks Username and Phone Number
+// ==========================================
+
+function findDuplicateEMI(username, phone, editKey = '') {
+
+    const normalizedUsername = String(username || '')
+        .trim()
+        .toLowerCase();
+
+    const normalizedPhone = String(phone || '')
+        .replace(/\D/g, '');
+
+    for (const record of allRecords) {
+
+        // When editing, ignore the current record
+        if (editKey && record.key === editKey) {
+            continue;
+        }
+
+        const existingUsername = String(record.username || '')
+            .trim()
+            .toLowerCase();
+
+        const existingPhone = String(record.phone || '')
+            .replace(/\D/g, '');
+
+        // Duplicate username
+        if (
+            normalizedUsername &&
+            existingUsername &&
+            normalizedUsername === existingUsername
+        ) {
+            return {
+                found: true,
+                record: record,
+                reason: 'username'
+            };
+        }
+
+        // Duplicate phone number
+        if (
+            normalizedPhone &&
+            existingPhone &&
+            normalizedPhone === existingPhone
+        ) {
+            return {
+                found: true,
+                record: record,
+                reason: 'phone'
+            };
+        }
+    }
+
+    return {
+        found: false,
+        record: null,
+        reason: ''
+    };
+}
+
+
+// ==========================================
+// SAVE / UPDATE EMI RECORD
+// WITH DUPLICATE ENTRY PREVENTION
+// ==========================================
+
+async function saveEMI() {
+
+    const editKey =
+        document.getElementById('editCustKey').value;
+
+    const username =
+        document.getElementById('userSelectDropdown').value.trim();
+
+    const name =
+        document.getElementById('custName').value.trim();
+
+    const phone =
+        document.getElementById('custPhone').value.trim();
+
+    const totalAmount =
+        parseFloat(document.getElementById('totalAmount').value);
+
+    const monthlyAmount =
+        parseFloat(
+            document.getElementById('monthlyAmount').value || 0
+        );
+
+    // Validate customer details
+    if (!name || isNaN(totalAmount) || totalAmount <= 0) {
+
+        alert('Please enter valid Name and Total Amount!');
+
+        return;
+    }
+
+    if (monthlyAmount < 0 || !Number.isFinite(monthlyAmount)) {
+
+        alert('Please enter a valid Monthly Installment Amount!');
+
+        return;
+    }
+
+    // ==========================================
+    // DUPLICATE CHECK
+    // Do not block the current record during edit
+    // ==========================================
+
+    const duplicate = findDuplicateEMI(
+        username,
+        phone,
+        editKey
+    );
+
+    if (duplicate.found) {
+
+        let duplicateMessage = '';
+
+        if (duplicate.reason === 'username') {
+
+            duplicateMessage =
+                'This App User already exists in EMI records!\n\n' +
+                'Name: ' + (duplicate.record.name || '-') + '\n' +
+                'Username: @' + (duplicate.record.username || '-') + '\n' +
+                'Phone: ' + (duplicate.record.phone || '-') + '\n\n' +
+                'The same user cannot be added again.';
+
+        } else {
+
+            duplicateMessage =
+                'This phone number already exists in EMI records!\n\n' +
+                'Name: ' + (duplicate.record.name || '-') + '\n' +
+                'Username: ' +
+                (
+                    duplicate.record.username
+                        ? '@' + duplicate.record.username
+                        : 'Manual Entry'
+                ) + '\n' +
+                'Phone: ' + (duplicate.record.phone || '-') + '\n\n' +
+                'Please check the existing record before adding another.';
+        }
+
+        alert(duplicateMessage);
+
+        return;
+    }
+
+    // ==========================================
+    // PREPARE SAVE BUTTON
+    // ==========================================
+
+    const btn = document.getElementById('saveCustBtn');
+
+    const originalText = btn.innerHTML;
+
+    btn.innerHTML = '<div class="spinner"></div>';
+
+    btn.disabled = true;
+
+    const payload = {
+        name: name,
+        username: username,
+        phone: phone,
+        totalAmount: totalAmount,
+        monthlyAmount: monthlyAmount
+    };
+
+    try {
+
+        // ==========================================
+        // UPDATE EXISTING CUSTOMER
+        // ==========================================
+
+        if (editKey) {
+
+            await db.ref(`emi_list/${editKey}`).update(payload);
+
+            alert('Customer EMI record updated successfully.');
+
+            closeAddModal();
+
+            return;
+        }
+
+        // ==========================================
+        // ADD NEW CUSTOMER
+        // ==========================================
+
+        const initialPaid = parseFloat(
+            document.getElementById('initialPaid').value || 0
+        );
+
+        if (!Number.isFinite(initialPaid) || initialPaid < 0) {
+
+            alert('Please enter a valid Initial Advance Amount.');
+
+            return;
+        }
+
+        const dateISO =
+            getSelectedOrCurrentDate('initialDate');
+
+        const newRef = db.ref('emi_list').push();
+
+        payload.createdAt = new Date().toISOString();
+
+        await newRef.set(payload);
+
+        // Save initial advance payment if provided
+        if (initialPaid > 0) {
+
+            await newRef.child('payments').push({
+                amount: initialPaid,
+                date: dateISO
+            });
+        }
+
+        alert('EMI record saved successfully.');
+
+        closeAddModal();
+
+    } catch (err) {
+
+        alert('Error saving record: ' + err.message);
+
+    } finally {
+
+        btn.innerHTML = originalText;
+
+        btn.disabled = false;
+    }
+}
+
     </script>
+
 </body>
 </html>
