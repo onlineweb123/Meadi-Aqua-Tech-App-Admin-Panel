@@ -137,7 +137,8 @@
                 </div>
                 <div class="field-box">
                     <label>Installation Date</label>
-                    <input type="text" id="editInstalled">
+                    <!-- காலண்டர் பிக்கராக மாற்றப்பட்டுள்ளது -->
+                    <input type="date" id="editInstalled">
                 </div>
                 <div class="field-box">
                     <label>Warranty Status</label>
@@ -225,6 +226,37 @@
         else btn.classList.remove('loading');
     }
 
+    // --- AUTOMATIC WARRANTY CALCULATION FUNCTION ---
+    function calculateAutoWarranty(dateVal) {
+        if (!dateVal) return;
+        
+        let installDate;
+        if (typeof dateVal === 'string' && dateVal.includes('/')) {
+            const parts = dateVal.split('/');
+            installDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+        } else {
+            installDate = new Date(dateVal);
+        }
+
+        if (!isNaN(installDate.getTime())) {
+            const now = new Date();
+            const oneYearInMs = 365 * 24 * 60 * 60 * 1000;
+            const isExpired = (now - installDate) > oneYearInMs;
+
+            const warrantySelect = document.getElementById('editWarranty');
+            if (isExpired) {
+                warrantySelect.value = "Expired";
+            } else {
+                warrantySelect.value = "Active";
+            }
+        }
+    }
+
+    // காலண்டரில் தேதியை மாற்றும்போது தானாகவே வாரண்டி ஸ்டேட்டஸை மாற்றுவதற்கான ஈவென்ட்
+    document.getElementById('editInstalled').addEventListener('change', (e) => {
+        calculateAutoWarranty(e.target.value);
+    });
+
     async function performSearch(input) {
         if(!input) return alert("Please enter Username or Phone Number");
 
@@ -280,8 +312,24 @@
     function renderUserData(user) {
         document.getElementById('displayName').innerText = `Customer: ${user.name} (${user.phone})`;
         document.getElementById('editModel').value = user.model || "";
-        document.getElementById('editInstalled').value = user.installed || "";
-        document.getElementById('editWarranty').value = user.warranty || "Active";
+        
+        // Installed Date-ஐ YYYY-MM-DD வடிவத்திற்கு மாற்றி காலண்டரில் அமைத்தல்
+        let rawInstalled = user.installed || "";
+        if (rawInstalled && rawInstalled.includes('/')) {
+            const parts = rawInstalled.split('/');
+            if (parts.length === 3) {
+                rawInstalled = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+        }
+        document.getElementById('editInstalled').value = rawInstalled;
+
+        // ஃபயர்பேஸில் உள்ள தேதியை வைத்துத் தானாக வாரண்டி ஸ்டேட்டஸைக் கணக்கிடுதல்
+        if (rawInstalled) {
+            calculateAutoWarranty(rawInstalled);
+        } else {
+            document.getElementById('editWarranty').value = user.warranty || "Active";
+        }
+
         document.getElementById('editAddress').value = user.address || "";
         document.getElementById('lastFilterDate').value = user.lastFilterDate || "";
         document.getElementById('lastAMCDate').value = user.lastAMCDate || "";
@@ -294,7 +342,6 @@
         const tbody = document.getElementById('historyBody');
         tbody.innerHTML = currentHistory.length === 0 ? '<tr><td colspan="3" style="text-align:center;">No records</td></tr>' : '';
 
-        // தேதி அடிப்படையில் புதியது முதலில் வரும்படி வரிசைப்படுத்துதல்
         currentHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         currentHistory.forEach((item, index) => {
@@ -339,9 +386,17 @@
             currentHistory.unshift({ type: sType, date: sDate });
         }
 
+        // தேதியை DD/MM/YYYY வடிவத்திற்கு மாற்றி ஃபயர்பேஸில் சேமிக்கத் தயார் செய்தல்
+        const installedVal = document.getElementById('editInstalled').value;
+        let formattedInstalled = installedVal;
+        if (installedVal && installedVal.includes('-')) {
+            const p = installedVal.split('-');
+            formattedInstalled = `${p[2]}/${p[1]}/${p[0]}`;
+        }
+
         const updatedData = {
             model: document.getElementById('editModel').value,
-            installed: document.getElementById('editInstalled').value,
+            installed: formattedInstalled,
             warranty: document.getElementById('editWarranty').value,
             address: document.getElementById('editAddress').value,
             lastFilterDate: document.getElementById('lastFilterDate').value,
