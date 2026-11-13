@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meadi Aqua Tech App</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', sans-serif; color: #f8fafc; }
+        
+        #app-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* மிதக்கும் AI விட்ஜெட் ஸ்டைல் */
+        #floating-wrapper {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            z-index: 99999;
+        }
+
+        #caption-box {
+            background: rgba(15, 23, 42, 0.95);
+            color: #f8fafc;
+            border: 1px solid #38bdf8;
+            padding: 12px 15px;
+            border-radius: 15px;
+            max-width: 280px;
+            font-size: 14px;
+            line-height: 1.4;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: none;
+            word-wrap: break-word;
+        }
+
+        #controls-bar {
+            display: none;
+            background: #1e293b;
+            padding: 6px 10px;
+            border-radius: 25px;
+            border: 1px solid #334155;
+            gap: 8px;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .ctrl-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ctrl-btn.active { background: #0284c7; }
+        .ctrl-btn.recording { background: #ef4444; animation: pulse 1s infinite; }
+        .ctrl-btn.close { background: #ef4444; }
+
+        #ai-orb {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            border: 2px solid #ffffff;
+            color: white;
+            font-size: 26px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(2, 132, 199, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        #ai-orb.speaking { animation: glow 1.2s infinite alternate; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes glow { from { box-shadow: 0 0 10px #38bdf8; } to { box-shadow: 0 0 25px #38bdf8, 0 0 40px #0284c7; } }
+    </style>
+</head>
+<body>
+
+    <!-- உங்கள் ஆப் பக்கங்கள் இதில் மாறும் -->
+    <iframe id="app-frame" src="index.html"></iframe>
+
+    <!-- மிதக்கும் AI விட்ஜெட் (எந்தப் பக்கத்திற்கும் மேலே எப்போதும் இருக்கும்) -->
+    <div id="floating-wrapper">
+        <div id="caption-box">வணக்கம் மாது! கேளுங்கள்...</div>
+        <div id="controls-bar">
+            <button id="mic-btn" class="ctrl-btn" onclick="startVoice()" title="பேசுங்கள்">🎤</button>
+            <button id="cap-btn" class="ctrl-btn" onclick="toggleCaption()" title="Caption On/Off">💬</button>
+            <button class="ctrl-btn close" onclick="closeAI()" title="மூடு">✖</button>
+        </div>
+        <button id="ai-orb" onclick="toggleAI()">💧</button>
+    </div>
+
+    <script>
+        // Firebase Setup
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
+            authDomain: "meadi-aqua-tech.firebaseapp.com",
+            databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
+            projectId: "meadi-aqua-tech",
+            storageBucket: "meadi-aqua-tech.firebasestorage.app",
+            messagingSenderId: "531151217708",
+            appId: "1:531151217708:web:b30b6e1a0bf7fa60f29d89",
+            measurementId: "G-QW495L6JVE"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const GEMINI_API_KEY = "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g"; // உங்கள் சரியான கீ
+        const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+
+        let isAIOpen = false;
+        let showCaptions = false;
+
+        function toggleAI() {
+            isAIOpen = !isAIOpen;
+            const controls = document.getElementById("controls-bar");
+            const capBox = document.getElementById("caption-box");
+            
+            if (isAIOpen) {
+                controls.style.display = "flex";
+                if (showCaptions) capBox.style.display = "block";
+                startVoice();
+            } else {
+                closeAI();
+            }
+        }
+
+        function closeAI() {
+            isAIOpen = false;
+            window.speechSynthesis.cancel();
+            document.getElementById("controls-bar").style.display = "none";
+            document.getElementById("caption-box").style.display = "none";
+            document.getElementById("ai-orb").classList.remove("speaking");
+        }
+
+        function toggleCaption() {
+            showCaptions = !showCaptions;
+            const capBtn = document.getElementById("cap-btn");
+            const capBox = document.getElementById("caption-box");
+            
+            if (showCaptions) {
+                capBtn.classList.add("active");
+                if (isAIOpen) capBox.style.display = "block";
+            } else {
+                capBtn.classList.remove("active");
+                capBox.style.display = "none";
+            }
+        }
+
+        function updateCaption(text) {
+            const capBox = document.getElementById("caption-box");
+            capBox.innerText = text;
+            if (isAIOpen && showCaptions) {
+                capBox.style.display = "block";
+            }
+        }
+
+        async function getFirebaseData() {
+            try {
+                const [products, reminders] = await Promise.all([
+                    db.ref('products').once('value'),
+                    db.ref('reminders_list').once('value')
+                ]);
+                let text = JSON.stringify({
+                    products: products.val() || {},
+                    reminders: reminders.val() || {}
+                });
+                return text.length > 60000 ? text.slice(0, 60000) : text;
+            } catch (error) {
+                return "டேட்டாபேஸ் தகவல் கிடைக்கவில்லை.";
+            }
+        }
+
+        async function callGemini(prompt) {
+            for (const model of MODELS) {
+                try {
+                    const response = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        }
+                    );
+                    const data = await response.json();
+                    if (data.candidates?.[0]?.content) {
+                        return { ok: true, text: data.candidates[0].content.parts[0].text };
+                    }
+                } catch (e) {}
+            }
+            return { ok: false, text: "பதிலை உருவாக்க முடியவில்லை. கோட்டா அல்லது நெட்வொர்க்கை சரிபார்க்கவும்." };
+        }
+
+        async function processQuestion(question) {
+            updateCaption("யோசிக்கிறேன்...");
+            const appData = await getFirebaseData();
+            const prompt = `நீங்கள் 'Meadi Aqua Tech' நிறுவனத்தின் உதவியாளர். கீழே உள்ள டேட்டாவை வைத்து சுருக்கமாகவும் தெளிவாகவும் தமிழில் பதில் சொல்லவும்:\n${appData}\n\nகேள்வி: ${question}`;
+
+            const result = await callGemini(prompt);
+            updateCaption(result.text);
+            speakTamil(result.text);
+        }
+
+        function startVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                updateCaption("Voice வசதி இல்லை.");
+                return;
+            }
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ta-IN';
+            const micBtn = document.getElementById("mic-btn");
+            
+            recognition.onstart = () => {
+                micBtn.classList.add("recording");
+                updateCaption("கேட்கிறேன், பேசுங்கள்...");
+            };
+            recognition.onend = () => micBtn.classList.remove("recording");
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                updateCaption("நீங்கள்: " + transcript);
+                processQuestion(transcript);
+            };
+            recognition.start();
+        }
+
+        function speakTamil(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ta-IN';
+                const orb = document.getElementById("ai-orb");
+                
+                utterance.onstart = () => orb.classList.add("speaking");
+                utterance.onend = () => orb.classList.remove("speaking");
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+    </script>
+</body>
+</html>
