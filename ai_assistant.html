@@ -104,7 +104,7 @@
 </div>
 
 <script>
-    // 1. உங்க Firebase Config விவரங்களை இங்கே போடவும்
+    // 1. உங்க Firebase Config விவரங்கள்
     const firebaseConfig = {
         apiKey: "YOUR_FIREBASE_API_KEY",
         authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -117,22 +117,32 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. உங்க இலவச Gemini API Key இங்கே போடவும்
+    // 2. உங்க Gemini API Key
     const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
 
-    // Firebase-லிருந்து மொத்த டேட்டாவையும் எடுக்கும் Function
+    // டேட்டாபேஸில் உள்ள முக்கிய பகுதிகளை மட்டும் சுருக்கமாக எடுக்கிறோம்
     async function getFirebaseData() {
         try {
-            // உங்க டேட்டாபேஸின் முக்கிய Node பெயரை இங்கே கொடுக்கலாம் (உதா: 'customers' அல்லது '/' முழு டேட்டாவிற்கும்)
+            // குறிப்பாக products, users அல்லது reminders போன்ற குறிப்பிட்ட பகுதிகளை எடுக்கலாம்
             const snapshot = await db.ref('/').once('value');
-            return JSON.stringify(snapshot.val());
+            const data = snapshot.val();
+            
+            // டேட்டா ரொம்ப பெரிதாக இருந்தால் சுருக்கி அனுப்புவோம்
+            if (!data) return "டேட்டா காலியாக உள்ளது.";
+            
+            // தேவையற்ற பெரிய விவரங்களைத் தவிர்த்து சுருக்கமான JSON அனுப்புதல்
+            const summary = {
+                products: data.products || {},
+                reminders: data.reminders_list || {},
+                users: data.users || {}
+            };
+            return JSON.stringify(summary);
         } catch (error) {
             console.error("Firebase Error:", error);
             return "டேட்டாபேஸ் தகவல் கிடைக்கவில்லை.";
         }
     }
 
-    // AI-க்கு கேள்வி அனுப்பி பதில் வாங்கும் Function
     async function sendMessage() {
         const inputField = document.getElementById("user-input");
         const question = inputField.value.trim();
@@ -142,14 +152,13 @@
         inputField.value = "";
         const loadingMsg = addMessage("யோசிக்கிறேன்...", "ai-msg");
 
-        // Firebase டேட்டாவை எடுக்கிறோம்
         const appData = await getFirebaseData();
 
         const prompt = `
-        நீங்கள் 'Meadi Aqua Tech' என்ற RO வாட்டர் ப்யூரிஃபையர் நிறுவனத்தின் உதவியாளர் (AI).
-        கீழே கொடுக்கப்பட்டுள்ள JSON டேட்டாபேஸ் தகவல்களை மட்டும் வைத்து, பயனர் கேட்கும் கேள்விக்கு சுருக்கமாகவும், தெளிவாகவும் தமிழில் பதில் சொல்லவும்.
+        நீங்கள் 'Meadi Aqua Tech' நிறுவனத்தின் உதவியாளர் (AI).
+        கீழே உள்ள டேட்டாபேஸ் தகவல்களை அடிப்படையாக வைத்து, பயனர் கேட்கும் கேள்விக்கு தமிழில் தெளிவாகவும் சுருக்கமாகவும் பதில் அளிக்கவும்.
         
-        நிறுவனத்தின் டேட்டாபேஸ் விவரங்கள்:
+        டேட்டாபேஸ் தகவல்கள்:
         ${appData}
 
         பயனரின் கேள்வி: ${question}
@@ -165,17 +174,20 @@
             });
 
             const data = await response.json();
-            const reply = data.candidates[0].content.parts[0].text;
             
-            loadingMsg.innerText = reply;
-            speakTamil(reply); // பதிலை தமிழில் சத்தமாக வாசிக்கும்
+            if (data.candidates && data.candidates[0].content) {
+                const reply = data.candidates[0].content.parts[0].text;
+                loadingMsg.innerText = reply;
+                speakTamil(reply);
+            } else {
+                loadingMsg.innerText = "மன்னிக்கவும், பதிலை உருவாக்க முடியவில்லை.";
+            }
         } catch (err) {
-            loadingMsg.innerText = "மன்னிக்கவும், பதில் பெறுவதில் சிக்கல் ஏற்பட்டுள்ளது.";
+            loadingMsg.innerText = "சமூக இணைப்பு அல்லது பிழை ஏற்பட்டுள்ளது.";
             console.error(err);
         }
     }
 
-    // Chat திரையில் மெசேஜ் காட்ட
     function addMessage(text, className) {
         const chatBox = document.getElementById("chat-box");
         const div = document.createElement("div");
@@ -186,7 +198,6 @@
         return div;
     }
 
-    // மைக் மூலம் தமிழில் பேச (Speech-to-Text)
     function startVoice() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
@@ -208,7 +219,6 @@
         recognition.start();
     }
 
-    // AI பதிலை தமிழில் பேச வைக்க (Text-to-Speech)
     function speakTamil(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
