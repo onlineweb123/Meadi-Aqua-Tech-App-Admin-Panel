@@ -10,7 +10,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', sans-serif; color: #f8fafc; }
-        
+
         #app-frame {
             width: 100%;
             height: 100%;
@@ -28,6 +28,8 @@
             align-items: flex-end;
             gap: 10px;
             z-index: 99999;
+            touch-action: none; /* ஸ்மூத் டிராக்கிங்கிற்கு அவசியம் */
+            user-select: none;
         }
 
         #caption-box {
@@ -80,12 +82,17 @@
             border: 2px solid #ffffff;
             color: white;
             font-size: 26px;
-            cursor: pointer;
+            cursor: grab;
             box-shadow: 0 4px 20px rgba(2, 132, 199, 0.6);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: none;
+        }
+        #ai-orb:active {
+            cursor: grabbing;
+            transform: scale(1.08);
         }
         #ai-orb.speaking { animation: glow 1.2s infinite alternate; }
 
@@ -106,7 +113,7 @@
             <button id="cap-btn" class="ctrl-btn" onclick="toggleCaption()" title="Caption On/Off">💬</button>
             <button class="ctrl-btn close" onclick="closeAI()" title="மூடு">✖</button>
         </div>
-        <button id="ai-orb" onclick="toggleAI()">💧</button>
+        <button id="ai-orb">💧</button>
     </div>
 
     <script>
@@ -124,17 +131,176 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const GEMINI_API_KEY = "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g"; // உங்கள் சரியான கீ
+        const GEMINI_API_KEY = "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g";
         const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
 
         let isAIOpen = false;
         let showCaptions = false;
 
+        // --- Smooth Momentum Gliding Drag & Drop Logic ---
+        const wrapper = document.getElementById("floating-wrapper");
+        const orb = document.getElementById("ai-orb");
+        const appFrame = document.getElementById("app-frame");
+
+        let isDragging = false;
+        let hasMoved = false;
+        let startX, startY, initialLeft, initialTop;
+        
+        // Momentum variables
+        let lastX, lastY, velocityX = 0, velocityY = 0;
+        let lastTime = 0;
+        let animationFrameId = null;
+
+        orb.addEventListener("pointerdown", (e) => {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            isDragging = true;
+            hasMoved = false;
+            
+            const rect = wrapper.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            initialLeft = rect.left;
+            initialTop = rect.top;
+
+            lastX = e.clientX;
+            lastY = e.clientY;
+            lastTime = performance.now();
+            velocityX = 0;
+            velocityY = 0;
+
+            wrapper.style.left = initialLeft + "px";
+            wrapper.style.top = initialTop + "px";
+            wrapper.style.bottom = "auto";
+            wrapper.style.right = "auto";
+
+            appFrame.style.pointerEvents = "none";
+            orb.setPointerCapture(e.pointerId);
+        });
+
+        orb.addEventListener("pointermove", (e) => {
+            if (!isDragging) return;
+
+            const currentTime = performance.now();
+            const dt = currentTime - lastTime;
+
+            if (dt > 0) {
+                velocityX = (e.clientX - lastX) / dt;
+                velocityY = (e.clientY - lastY) / dt;
+            }
+
+            lastX = e.clientX;
+            lastY = e.clientY;
+            lastTime = currentTime;
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                hasMoved = true;
+            }
+
+            if (hasMoved) {
+                let newLeft = initialLeft + dx;
+                let newTop = initialTop + dy;
+
+                const maxLeft = window.innerWidth - wrapper.offsetWidth - 10;
+                const maxTop = window.innerHeight - wrapper.offsetHeight - 10;
+
+                newLeft = Math.max(10, Math.min(newLeft, maxLeft));
+                newTop = Math.max(10, Math.min(newTop, maxTop));
+
+                wrapper.style.left = newLeft + "px";
+                wrapper.style.top = newTop + "px";
+
+                if (newLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2) {
+                    wrapper.style.alignItems = "flex-start";
+                } else {
+                    wrapper.style.alignItems = "flex-end";
+                }
+            }
+        });
+
+        orb.addEventListener("pointerup", (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            appFrame.style.pointerEvents = "auto";
+            orb.releasePointerCapture(e.pointerId);
+
+            if (!hasMoved) {
+                toggleAI();
+            } else {
+                startMomentumGlide();
+            }
+        });
+
+        function startMomentumGlide() {
+            let currentLeft = parseFloat(wrapper.style.left) || wrapper.getBoundingClientRect().left;
+            let currentTop = parseFloat(wrapper.style.top) || wrapper.getBoundingClientRect().top;
+
+            function frame() {
+                velocityX *= 0.92;
+                velocityY *= 0.92;
+
+                currentLeft += velocityX * 16;
+                currentTop += velocityY * 16;
+
+                const maxLeft = window.innerWidth - wrapper.offsetWidth - 10;
+                const maxTop = window.innerHeight - wrapper.offsetHeight - 10;
+
+                if (currentLeft < 10) { currentLeft = 10; velocityX = 0; }
+                if (currentLeft > maxLeft) { currentLeft = maxLeft; velocityX = 0; }
+                if (currentTop < 10) { currentTop = 10; velocityY = 0; }
+                if (currentTop > maxTop) { currentTop = maxTop; velocityY = 0; }
+
+                wrapper.style.left = currentLeft + "px";
+                wrapper.style.top = currentTop + "px";
+
+                if (currentLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2) {
+                    wrapper.style.alignItems = "flex-start";
+                } else {
+                    wrapper.style.alignItems = "flex-end";
+                }
+
+                if (Math.abs(velocityX) > 0.1 || Math.abs(velocityY) > 0.1) {
+                    animationFrameId = requestAnimationFrame(frame);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(frame);
+        }
+        // --------------------------------
+
         function toggleAI() {
+            // விட்ஜெட் மூலையில் அல்லது எங்கிருந்தாலும் திறக்கும்போது அதன் தற்போதைய பொசிஷனை லெஃப்ட்/டாப் ஆக மாற்றி லாக் செய்தல்
+            const rect = wrapper.getBoundingClientRect();
+            wrapper.style.left = rect.left + "px";
+            wrapper.style.top = rect.top + "px";
+            wrapper.style.bottom = "auto";
+            wrapper.style.right = "auto";
+
+            // ஸ்கிரீன் எல்லைக்கு வெளியே போகாமல் இருக்க சரிபார்த்தல்
+            const maxLeft = window.innerWidth - wrapper.offsetWidth - 10;
+            const maxTop = window.innerHeight - wrapper.offsetHeight - 10;
+            let currentLeft = Math.max(10, Math.min(rect.left, maxLeft));
+            let currentTop = Math.max(10, Math.min(rect.top, maxTop));
+            
+            wrapper.style.left = currentLeft + "px";
+            wrapper.style.top = currentTop + "px";
+
+            if (currentLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2) {
+                wrapper.style.alignItems = "flex-start";
+            } else {
+                wrapper.style.alignItems = "flex-end";
+            }
+
             isAIOpen = !isAIOpen;
             const controls = document.getElementById("controls-bar");
             const capBox = document.getElementById("caption-box");
-            
+
             if (isAIOpen) {
                 controls.style.display = "flex";
                 if (showCaptions) capBox.style.display = "block";
@@ -150,13 +316,19 @@
             document.getElementById("controls-bar").style.display = "none";
             document.getElementById("caption-box").style.display = "none";
             document.getElementById("ai-orb").classList.remove("speaking");
+            
+            wrapper.style.left = "auto";
+            wrapper.style.top = "auto";
+            wrapper.style.bottom = "20px";
+            wrapper.style.right = "20px";
+            wrapper.style.alignItems = "flex-end";
         }
 
         function toggleCaption() {
             showCaptions = !showCaptions;
             const capBtn = document.getElementById("cap-btn");
             const capBox = document.getElementById("caption-box");
-            
+
             if (showCaptions) {
                 capBtn.classList.add("active");
                 if (isAIOpen) capBox.style.display = "block";
@@ -229,7 +401,7 @@
             const recognition = new SpeechRecognition();
             recognition.lang = 'ta-IN';
             const micBtn = document.getElementById("mic-btn");
-            
+
             recognition.onstart = () => {
                 micBtn.classList.add("recording");
                 updateCaption("கேட்கிறேன், பேசுங்கள்...");
@@ -248,11 +420,10 @@
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'ta-IN';
-                const orb = document.getElementById("ai-orb");
-                
+
                 utterance.onstart = () => orb.classList.add("speaking");
                 utterance.onend = () => orb.classList.remove("speaking");
-                
+
                 window.speechSynthesis.speak(utterance);
             }
         }
