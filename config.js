@@ -1,4 +1,3 @@
-
 // ======================================
 // JARVIS CONFIGURATION
 // ======================================
@@ -9,7 +8,7 @@
 
 window.JARVIS_CONFIG = {
     firebase: {
-        apiKey: "YOUR_FIREBASE_API_KEY",
+        apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
         authDomain: "meadi-aqua-tech.firebaseapp.com",
         databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
         projectId: "meadi-aqua-tech",
@@ -20,5 +19,5 @@ window.JARVIS_CONFIG = {
     },
 
     // Cloudflare Worker URL
-    groqAPI: "https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev"
+    groqAPI: "https://meadi-jarvis-api.onlineweb123.workers.dev"
 };
