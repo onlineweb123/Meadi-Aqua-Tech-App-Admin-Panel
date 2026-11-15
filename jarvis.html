@@ -1,15 +1,28 @@
+
 <!DOCTYPE html>
 <html lang="ta">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meadi Aqua Tech App</title>
+
     <link rel="manifest" href="manifest.json">
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="config.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', sans-serif; color: #f8fafc; }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0f172a;
+            font-family: 'Segoe UI', sans-serif;
+            color: #f8fafc;
+        }
 
         #app-frame {
             width: 100%;
@@ -18,7 +31,6 @@
             display: block;
         }
 
-        /* மிதக்கும் AI விட்ஜெட் ஸ்டைல் */
         #floating-wrapper {
             position: fixed;
             bottom: 20px;
@@ -28,7 +40,7 @@
             align-items: flex-end;
             gap: 10px;
             z-index: 99999;
-            touch-action: none; /* ஸ்மூத் டிராக்கிங்கிற்கு அவசியம் */
+            touch-action: none;
             user-select: none;
         }
 
@@ -70,8 +82,14 @@
             align-items: center;
             justify-content: center;
         }
+
         .ctrl-btn.active { background: #0284c7; }
-        .ctrl-btn.recording { background: #ef4444; animation: pulse 1s infinite; }
+
+        .ctrl-btn.recording {
+            background: #ef4444;
+            animation: pulse 1s infinite;
+        }
+
         .ctrl-btn.close { background: #ef4444; }
 
         #ai-orb {
@@ -90,61 +108,113 @@
             transition: transform 0.2s, box-shadow 0.2s;
             touch-action: none;
         }
+
         #ai-orb:active {
             cursor: grabbing;
             transform: scale(1.08);
         }
-        #ai-orb.speaking { animation: glow 1.2s infinite alternate; }
 
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        @keyframes glow { from { box-shadow: 0 0 10px #38bdf8; } to { box-shadow: 0 0 25px #38bdf8, 0 0 40px #0284c7; } }
+        #ai-orb.speaking {
+            animation: glow 1.2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 10px #38bdf8; }
+            to {
+                box-shadow: 0 0 25px #38bdf8, 0 0 40px #0284c7;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-    <!-- உங்கள் ஆப் பக்கங்கள் இதில் மாறும் -->
     <iframe id="app-frame" src="index.html"></iframe>
 
-    <!-- மிதக்கும் AI விட்ஜெட் (எந்தப் பக்கத்திற்கும் மேலே எப்போதும் இருக்கும்) -->
     <div id="floating-wrapper">
-        <div id="caption-box">வணக்கம் மாது! கேளுங்கள்...</div>
-        <div id="controls-bar">
-            <button id="mic-btn" class="ctrl-btn" onclick="startVoice()" title="பேசுங்கள்">🎤</button>
-            <button id="cap-btn" class="ctrl-btn" onclick="toggleCaption()" title="Caption On/Off">💬</button>
-            <button class="ctrl-btn close" onclick="closeAI()" title="மூடு">✖</button>
+
+        <div id="caption-box">
+            வணக்கம் மாது! கேளுங்கள்...
         </div>
+
+        <div id="controls-bar">
+
+            <button id="mic-btn" class="ctrl-btn"
+                onclick="startVoice()" title="பேசுங்கள்">🎤</button>
+
+            <button id="cap-btn" class="ctrl-btn"
+                onclick="toggleCaption()" title="Caption On/Off">💬</button>
+
+            <button class="ctrl-btn close"
+                onclick="closeAI()" title="மூடு">✖</button>
+
+        </div>
+
         <button id="ai-orb">💧</button>
+
     </div>
 
-    <script type="module">
-        import { CONFIG } from "./config.js";
+    <script>
 
-        // Firebase இனிஷியலைசேஷன்
-        if (!firebase.apps.length) firebase.initializeApp(CONFIG.firebaseConfig);
+        // ======================================
+        // 1. FIREBASE CONFIG FROM config.js
+        // ======================================
+
+        if (!window.JARVIS_CONFIG) {
+            throw new Error("config.js not loaded!");
+        }
+
+        const firebaseConfig = window.JARVIS_CONFIG.firebase;
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
         const db = firebase.database();
 
-        // Groq API Key மற்றும் Models
-        const GROQ_API_KEY = CONFIG.groqKey;
-        const GROQ_MODELS = ["openai/gpt-oss-120b", "llama-3.1-8b-instant"];
+        // ======================================
+        // 2. GROQ BACKEND CONFIGURATION
+        // ======================================
+
+        const GROQ_API_URL = window.JARVIS_CONFIG.groqAPI;
+
+        // API Key இங்கு கிடையாது.
+        // அது Cloudflare Secret-ல் பாதுகாக்கப்படுகிறது.
 
         let isAIOpen = false;
         let showCaptions = false;
 
-        // --- Smooth Momentum Gliding Drag & Drop Logic ---
+        // ======================================
+        // 3. DRAG AND DROP ELEMENTS
+        // ======================================
+
         const wrapper = document.getElementById("floating-wrapper");
         const orb = document.getElementById("ai-orb");
         const appFrame = document.getElementById("app-frame");
 
         let isDragging = false;
         let hasMoved = false;
+
         let startX, startY, initialLeft, initialTop;
-        
-        // Momentum variables
-        let lastX, lastY, velocityX = 0, velocityY = 0;
+
+        let lastX, lastY;
+        let velocityX = 0, velocityY = 0;
+
         let lastTime = 0;
         let animationFrameId = null;
 
+        // ======================================
+        // 4. POINTER DOWN
+        // ======================================
+
         orb.addEventListener("pointerdown", (e) => {
+
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
@@ -152,29 +222,40 @@
 
             isDragging = true;
             hasMoved = false;
-            
+
             const rect = wrapper.getBoundingClientRect();
+
             startX = e.clientX;
             startY = e.clientY;
+
             initialLeft = rect.left;
             initialTop = rect.top;
 
             lastX = e.clientX;
             lastY = e.clientY;
+
             lastTime = performance.now();
+
             velocityX = 0;
             velocityY = 0;
 
             wrapper.style.left = initialLeft + "px";
             wrapper.style.top = initialTop + "px";
+
             wrapper.style.bottom = "auto";
             wrapper.style.right = "auto";
 
             appFrame.style.pointerEvents = "none";
+
             orb.setPointerCapture(e.pointerId);
         });
 
+        // ======================================
+        // 5. POINTER MOVE
+        // ======================================
+
         orb.addEventListener("pointermove", (e) => {
+
             if (!isDragging) return;
 
             const currentTime = performance.now();
@@ -197,6 +278,7 @@
             }
 
             if (hasMoved) {
+
                 let newLeft = initialLeft + dx;
                 let newTop = initialTop + dy;
 
@@ -209,18 +291,24 @@
                 wrapper.style.left = newLeft + "px";
                 wrapper.style.top = newTop + "px";
 
-                if (newLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2) {
-                    wrapper.style.alignItems = "flex-start";
-                } else {
-                    wrapper.style.alignItems = "flex-end";
-                }
+                wrapper.style.alignItems =
+                    newLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2
+                    ? "flex-start" : "flex-end";
             }
         });
 
+        // ======================================
+        // 6. POINTER UP
+        // ======================================
+
         orb.addEventListener("pointerup", (e) => {
+
             if (!isDragging) return;
+
             isDragging = false;
+
             appFrame.style.pointerEvents = "auto";
+
             orb.releasePointerCapture(e.pointerId);
 
             if (!hasMoved) {
@@ -230,11 +318,22 @@
             }
         });
 
+        // ======================================
+        // 7. MOMENTUM GLIDING
+        // ======================================
+
         function startMomentumGlide() {
-            let currentLeft = parseFloat(wrapper.style.left) || wrapper.getBoundingClientRect().left;
-            let currentTop = parseFloat(wrapper.style.top) || wrapper.getBoundingClientRect().top;
+
+            let currentLeft =
+                parseFloat(wrapper.style.left) ||
+                wrapper.getBoundingClientRect().left;
+
+            let currentTop =
+                parseFloat(wrapper.style.top) ||
+                wrapper.getBoundingClientRect().top;
 
             function frame() {
+
                 velocityX *= 0.92;
                 velocityY *= 0.92;
 
@@ -244,198 +343,365 @@
                 const maxLeft = window.innerWidth - wrapper.offsetWidth - 10;
                 const maxTop = window.innerHeight - wrapper.offsetHeight - 10;
 
-                if (currentLeft < 10) { currentLeft = 10; velocityX = 0; }
-                if (currentLeft > maxLeft) { currentLeft = maxLeft; velocityX = 0; }
-                if (currentTop < 10) { currentTop = 10; velocityY = 0; }
-                if (currentTop > maxTop) { currentTop = maxTop; velocityY = 0; }
+                if (currentLeft < 10) {
+                    currentLeft = 10;
+                    velocityX = 0;
+                }
+
+                if (currentLeft > maxLeft) {
+                    currentLeft = maxLeft;
+                    velocityX = 0;
+                }
+
+                if (currentTop < 10) {
+                    currentTop = 10;
+                    velocityY = 0;
+                }
+
+                if (currentTop > maxTop) {
+                    currentTop = maxTop;
+                    velocityY = 0;
+                }
 
                 wrapper.style.left = currentLeft + "px";
                 wrapper.style.top = currentTop + "px";
 
-                if (currentLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2) {
-                    wrapper.style.alignItems = "flex-start";
-                } else {
-                    wrapper.style.alignItems = "flex-end";
-                }
+                wrapper.style.alignItems =
+                    currentLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2
+                    ? "flex-start" : "flex-end";
 
-                if (Math.abs(velocityX) > 0.1 || Math.abs(velocityY) > 0.1) {
+                if (
+                    Math.abs(velocityX) > 0.1 ||
+                    Math.abs(velocityY) > 0.1
+                ) {
                     animationFrameId = requestAnimationFrame(frame);
+                } else {
+                    animationFrameId = null;
                 }
             }
 
             animationFrameId = requestAnimationFrame(frame);
         }
-        // --------------------------------
+
+        // ======================================
+        // 8. TOGGLE AI
+        // ======================================
 
         function toggleAI() {
+
             const rect = wrapper.getBoundingClientRect();
+
             wrapper.style.left = rect.left + "px";
             wrapper.style.top = rect.top + "px";
+
             wrapper.style.bottom = "auto";
             wrapper.style.right = "auto";
 
             const maxLeft = window.innerWidth - wrapper.offsetWidth - 10;
             const maxTop = window.innerHeight - wrapper.offsetHeight - 10;
+
             let currentLeft = Math.max(10, Math.min(rect.left, maxLeft));
             let currentTop = Math.max(10, Math.min(rect.top, maxTop));
-            
+
             wrapper.style.left = currentLeft + "px";
             wrapper.style.top = currentTop + "px";
 
-            if (currentLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2) {
-                wrapper.style.alignItems = "flex-start";
-            } else {
-                wrapper.style.alignItems = "flex-end";
-            }
+            wrapper.style.alignItems =
+                currentLeft + (wrapper.offsetWidth / 2) < window.innerWidth / 2
+                ? "flex-start" : "flex-end";
 
             isAIOpen = !isAIOpen;
+
             const controls = document.getElementById("controls-bar");
             const capBox = document.getElementById("caption-box");
 
             if (isAIOpen) {
+
                 controls.style.display = "flex";
-                if (showCaptions) capBox.style.display = "block";
+
+                if (showCaptions) {
+                    capBox.style.display = "block";
+                }
+
                 startVoice();
+
             } else {
                 closeAI();
             }
         }
 
-        window.closeAI = function() {
+        // ======================================
+        // 9. CLOSE AI
+        // ======================================
+
+        function closeAI() {
+
             isAIOpen = false;
+
             window.speechSynthesis.cancel();
+
             document.getElementById("controls-bar").style.display = "none";
             document.getElementById("caption-box").style.display = "none";
+
             document.getElementById("ai-orb").classList.remove("speaking");
-            
+
             wrapper.style.left = "auto";
             wrapper.style.top = "auto";
+
             wrapper.style.bottom = "20px";
             wrapper.style.right = "20px";
+
             wrapper.style.alignItems = "flex-end";
         }
 
-        window.toggleCaption = function() {
+        // ======================================
+        // 10. CAPTION
+        // ======================================
+
+        function toggleCaption() {
+
             showCaptions = !showCaptions;
+
             const capBtn = document.getElementById("cap-btn");
             const capBox = document.getElementById("caption-box");
 
             if (showCaptions) {
+
                 capBtn.classList.add("active");
-                if (isAIOpen) capBox.style.display = "block";
+
+                if (isAIOpen) {
+                    capBox.style.display = "block";
+                }
+
             } else {
+
                 capBtn.classList.remove("active");
                 capBox.style.display = "none";
+
             }
         }
 
         function updateCaption(text) {
+
             const capBox = document.getElementById("caption-box");
+
             capBox.innerText = text;
+
             if (isAIOpen && showCaptions) {
                 capBox.style.display = "block";
             }
         }
 
+        // ======================================
+        // 11. FIREBASE DATA
+        // ======================================
+
         async function getFirebaseData() {
+
             try {
+
                 const [products, reminders] = await Promise.all([
+
                     db.ref('products').once('value'),
+
                     db.ref('reminders_list').once('value')
+
                 ]);
+
                 let text = JSON.stringify({
+
                     products: products.val() || {},
+
                     reminders: reminders.val() || {}
+
                 });
-                return text.length > 25000 ? text.slice(0, 25000) : text;
+
+                return text.length > 25000
+                    ? text.slice(0, 25000)
+                    : text;
+
             } catch (error) {
+
+                console.error("Firebase Error:", error);
+
                 return "டேட்டாபேஸ் தகவல் கிடைக்கவில்லை.";
+
             }
         }
 
-        // Groq API Calling Function
+        // ======================================
+        // 12. SECURE GROQ API CALL
+        // ======================================
+
         async function callGroq(prompt) {
-            for (const model of GROQ_MODELS) {
-                try {
-                    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${GROQ_API_KEY}`
-                        },
-                        body: JSON.stringify({
-                            model: model,
-                            messages: [
-                                {
-                                    role: "system",
-                                    content: "நீங்கள் 'Meadi Aqua Tech' நிறுவனத்தின் உதவியாளர். கொடுக்கப்பட்டுள்ள டேட்டாவை வைத்து மட்டும் சுருக்கமாகவும் தெளிவாகவும் தமிழில் பதில் சொல்லவும். டேட்டாவில் தகவல் இல்லை என்றால் 'என்னிடம் அந்த தகவல் இல்லை' என்று கூறவும்."
-                                },
-                                {
-                                    role: "user",
-                                    content: prompt
-                                }
-                            ],
-                            temperature: 0.3,
-                            max_tokens: 500
-                        })
-                    });
 
-                    const data = await response.json();
-                    if (data.choices && data.choices[0]?.message?.content) {
-                        return { ok: true, text: data.choices[0].message.content };
-                    }
-                } catch (e) {
-                    console.error("Groq Error:", e);
+            try {
+
+                const response = await fetch(GROQ_API_URL, {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        prompt: prompt
+                    })
+
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.ok) {
+
+                    console.error("Groq Backend Error:", data.error);
+
+                    return {
+                        ok: false,
+                        text: "AI பதிலை உருவாக்க முடியவில்லை. Backend அல்லது நெட்வொர்க்கை சரிபார்க்கவும்."
+                    };
                 }
+
+                return {
+                    ok: true,
+                    text: data.text
+                };
+
+            } catch (error) {
+
+                console.error("Groq Connection Error:", error);
+
+                return {
+                    ok: false,
+                    text: "AI Server-ஐ தொடர்புகொள்ள முடியவில்லை. இணைய இணைப்பை சரிபார்க்கவும்."
+                };
+
             }
-            return { ok: false, text: "பதிலை உருவாக்க முடியவில்லை. Groq API Key அல்லது நெட்வொர்க்கை சரிபார்க்கவும்." };
         }
+
+        // ======================================
+        // 13. PROCESS QUESTION
+        // ======================================
 
         async function processQuestion(question) {
+
             updateCaption("யோசிக்கிறேன்...");
+
             const appData = await getFirebaseData();
-            const prompt = `டேட்டா:\n${appData}\n\nகேள்வி: ${question}`;
+
+            const prompt =
+                `டேட்டா:\n${appData}\n\nகேள்வி: ${question}`;
 
             const result = await callGroq(prompt);
+
             updateCaption(result.text);
+
             speakTamil(result.text);
         }
 
-        window.startVoice = function() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        // ======================================
+        // 14. TAMIL VOICE RECOGNITION
+        // ======================================
+
+        let recognition = null;
+
+        function startVoice() {
+
+            const SpeechRecognition =
+                window.SpeechRecognition ||
+                window.webkitSpeechRecognition;
+
             if (!SpeechRecognition) {
+
                 updateCaption("Voice வசதி இல்லை.");
+
                 return;
             }
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'ta-IN';
-            const micBtn = document.getElementById("mic-btn");
 
-            recognition.onstart = () => {
-                micBtn.classList.add("recording");
-                updateCaption("கேட்கிறேன், பேசுங்கள்...");
-            };
-            recognition.onend = () => micBtn.classList.remove("recording");
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                updateCaption("நீங்கள்: " + transcript);
-                processQuestion(transcript);
-            };
-            recognition.start();
+            try {
+
+                recognition = new SpeechRecognition();
+
+                recognition.lang = 'ta-IN';
+
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                const micBtn = document.getElementById("mic-btn");
+
+                recognition.onstart = () => {
+
+                    micBtn.classList.add("recording");
+
+                    updateCaption("கேட்கிறேன், பேசுங்கள்...");
+                };
+
+                recognition.onend = () => {
+
+                    micBtn.classList.remove("recording");
+
+                };
+
+                recognition.onerror = (event) => {
+
+                    micBtn.classList.remove("recording");
+
+                    updateCaption("Voice Error: " + event.error);
+
+                };
+
+                recognition.onresult = (event) => {
+
+                    const transcript =
+                        event.results[0][0].transcript;
+
+                    updateCaption("நீங்கள்: " + transcript);
+
+                    processQuestion(transcript);
+                };
+
+                recognition.start();
+
+            } catch (error) {
+
+                updateCaption("Microphone தொடங்க முடியவில்லை.");
+
+            }
         }
 
+        // ======================================
+        // 15. TAMIL TEXT TO SPEECH
+        // ======================================
+
         function speakTamil(text) {
+
             if ('speechSynthesis' in window) {
+
                 window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
+
+                const utterance =
+                    new SpeechSynthesisUtterance(text);
+
                 utterance.lang = 'ta-IN';
 
-                utterance.onstart = () => orb.classList.add("speaking");
-                utterance.onend = () => orb.classList.remove("speaking");
+                utterance.onstart = () => {
+                    orb.classList.add("speaking");
+                };
+
+                utterance.onend = () => {
+                    orb.classList.remove("speaking");
+                };
+
+                utterance.onerror = () => {
+                    orb.classList.remove("speaking");
+                };
 
                 window.speechSynthesis.speak(utterance);
             }
         }
+
     </script>
+
 </body>
 </html>
