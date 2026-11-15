@@ -1,13 +1,12 @@
 // ரகசிய சாவிகள் (Encoded)
 const _0x1a2b = {
-  fKey: "QUl6YVN5QXF5eUdKdF90MHp0a25NdWRGVkxtbzZyZWxrRWEyODRn",
+  fKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
   gKey: "Z3NrX1h1QzJwdVhzOTdjU0hQam5QQTJxV0dkeWIzRllnb09DWFZtQnJjMWpoV1VXZWg5VVFROVYY="
 };
 
-// கீகளை மீட்டெடுக்கும் பகுதி
 export const CONFIG = {
   firebaseConfig: {
-    apiKey: atob(_0x1a2b.fKey),
+    apiKey: _0x1a2b.fKey,
     authDomain: "meadi-aqua-tech.firebaseapp.com",
     databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
     projectId: "meadi-aqua-tech",
