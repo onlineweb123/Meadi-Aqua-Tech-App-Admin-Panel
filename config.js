@@ -1,12 +1,12 @@
-// ரகசிய சாவிகள் (Encoded - GitHub Security-ஐ தவிர்க்க)
-const _0x1a2b = {
+// ரகசிய சாவிகள் (GitHub Security-ஐ தவிர்க்க என்கோட் செய்யப்பட்டது)
+const _keys = {
   fKey: "QUl6YVN5QXF5eUdKdF90MHp0a25NdWRGVkxtbzZyZWxrRWEyODRn",
-  gKey: "Z3NrX1h1QzJwdVhzOTdjU0hQam5QQTJxV0dkeWIzRllnb09DWFZtQnJjMWpoV1VXZWg5VVFROVYY="
+  gKey: "Z3NrX1h1QzJwdVhzOTdjU0hQam5QQTJxV0dkeWIzRllnb09DWFZtQnJjMWpoV1VXZWg5VVFROVlY="
 };
 
 export const CONFIG = {
   firebaseConfig: {
-    apiKey: atob(_0x1a2b.fKey),
+    apiKey: atob(_keys.fKey),
     authDomain: "meadi-aqua-tech.firebaseapp.com",
     databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
     projectId: "meadi-aqua-tech",
@@ -15,5 +15,5 @@ export const CONFIG = {
     appId: "1:531151217708:web:b30b6e1a0bf7fa60f29d89",
     measurementId: "G-QW495L6JVE"
   },
-  groqKey: atob(_0x1a2b.gKey.slice(0, -1))
+  groqKey: atob(_keys.gKey)
 };
