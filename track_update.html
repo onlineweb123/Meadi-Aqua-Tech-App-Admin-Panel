@@ -85,6 +85,17 @@
       background: #dcfce7;
       color: var(--success);
     }
+    .coupon-pill {
+      display: inline-block;
+      margin-top: 6px;
+      background: #fff7ed;
+      color: #ea580c;
+      border: 1px solid #fed7aa;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 8px;
+    }
     .cust-name { font-size: 16px; font-weight: 800; }
     .cust-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .loc-line { font-size: 13px; color: var(--text); margin-top: 8px; }
@@ -346,9 +357,6 @@
       <label for="fromField">From (Dispatch Location)</label>
       <input type="text" id="fromField" value="Meadi Aqua Tech, Cuddalore" />
 
-      <label for="currentField">Current Location (Now)</label>
-      <input type="text" id="currentField" placeholder="e.g., Cuddalore Chavadi" />
-
       <label for="nextField">Next / Delivery To</label>
       <input type="text" id="nextField" placeholder="e.g., Kurinjipadi / Customer Address" />
 
@@ -397,8 +405,12 @@
 
     let usersData = {};
     let ordersData = {};
+    let appliedCouponsData = {};
     let snapshotItems = [];
+    let snapshotBaseTotal = 0;
+    let snapshotDiscount = 0;
     let snapshotTotal = 0;
+    let snapshotCoupon = null;
 
     const stepLabels = {
       1: "1. Confirmed",
@@ -409,12 +421,14 @@
 
     async function loadInitialData() {
       try {
-        const [uSnap, oSnap] = await Promise.all([
+        const [uSnap, oSnap, cSnap] = await Promise.all([
           get(ref(db, "users")),
-          get(ref(db, "tracking_order"))
+          get(ref(db, "tracking_order")),
+          get(ref(db, "applied_coupons"))
         ]);
         if (uSnap.exists()) usersData = uSnap.val();
         if (oSnap.exists()) ordersData = oSnap.val();
+        if (cSnap.exists()) appliedCouponsData = cSnap.val();
 
         filterCustomerSelect();
         renderOrdersList();
@@ -468,25 +482,36 @@
 
       const user = usersData[username] || {};
       const existing = ordersData[username];
+      const activeCoupon = appliedCouponsData[username] || null;
 
       if (existing) {
         document.getElementById("orderIdField").value = existing.orderId || generateNextOrderId();
         document.getElementById("stepField").value = String(existing.statusStep || 1);
         document.getElementById("fromField").value = existing.fromLocation || "Meadi Aqua Tech, Cuddalore";
-        document.getElementById("currentField").value = existing.currentLocation || "";
         document.getElementById("nextField").value = existing.nextLocation || existing.toLocation || user.address || "";
         document.getElementById("etaField").value = existing.expectedDelivery || "";
         snapshotItems = Array.isArray(existing.items) ? existing.items : [];
         snapshotTotal = Number(existing.totalAmount) || 0;
+        snapshotDiscount = Number(existing.discountAmount) || 0;
+        snapshotBaseTotal = Number(existing.baseAmount) || (snapshotTotal + snapshotDiscount);
+        snapshotCoupon = existing.couponCode
+          ? {
+              couponCode: existing.couponCode,
+              influencerName: existing.influencerName || "",
+              discountPercentage: Number(existing.discountPercentage) || 0
+            }
+          : activeCoupon;
       } else {
         document.getElementById("orderIdField").value = generateNextOrderId();
         document.getElementById("stepField").value = "1";
         document.getElementById("fromField").value = "Meadi Aqua Tech, Cuddalore";
-        document.getElementById("currentField").value = "Order Confirmed at Store";
         document.getElementById("nextField").value = user.address || "";
         document.getElementById("etaField").value = "Soon";
         snapshotItems = [];
+        snapshotBaseTotal = 0;
+        snapshotDiscount = 0;
         snapshotTotal = 0;
+        snapshotCoupon = activeCoupon;
       }
       renderSnapshotBox();
     };
@@ -499,9 +524,24 @@
       }
 
       try {
-        const snap = await get(ref(db, `carts/${username}`));
+        const [snap, couponSnap] = await Promise.all([
+          get(ref(db, `carts/${username}`)),
+          get(ref(db, `applied_coupons/${username}`))
+        ]);
+
         snapshotItems = [];
+        snapshotBaseTotal = 0;
+        snapshotDiscount = 0;
         snapshotTotal = 0;
+        let couponEligibleTotal = 0;
+
+        if (couponSnap.exists()) {
+          snapshotCoupon = couponSnap.val();
+          appliedCouponsData[username] = snapshotCoupon;
+        } else {
+          snapshotCoupon = null;
+          delete appliedCouponsData[username];
+        }
 
         if (snap.exists()) {
           const cartObj = snap.val();
@@ -509,15 +549,29 @@
             const item = cartObj[k];
             const qty = Number(item.quantity) || 1;
             const price = Number(item.price) || 0;
-            snapshotTotal += qty * price;
+            const itemSum = qty * price;
+            snapshotBaseTotal += itemSum;
+
+            if (item.type !== "spare_part") {
+              couponEligibleTotal += itemSum;
+            }
+
             snapshotItems.push({
               productName: item.productName || "Item",
               price: price,
               quantity: qty,
+              type: item.type || "",
               image: item.image || ""
             });
           });
         }
+
+        if (snapshotCoupon && couponEligibleTotal > 0) {
+          const pct = Number(snapshotCoupon.discountPercentage) || 0;
+          snapshotDiscount = Math.round(couponEligibleTotal * (pct / 100));
+        }
+        snapshotTotal = Math.max(0, snapshotBaseTotal - snapshotDiscount);
+
         renderSnapshotBox();
       } catch (err) {
         console.error(err);
@@ -528,9 +582,25 @@
     function renderSnapshotBox() {
       const box = document.getElementById("snapBox");
       if (!snapshotItems.length) {
-        box.innerHTML = `<div style="font-size:12px; color:var(--muted); text-align:center;">Cart-ல் பொருட்கள் இல்லை (Refresh Cart அழுத்தவும்).</div>`;
+        const couponHint = snapshotCoupon
+          ? `<div style="font-size:11px; color:#ea580c; font-weight:700; margin-top:4px;">🏷️ Coupon Saved: ${snapshotCoupon.couponCode} (${snapshotCoupon.discountPercentage}% OFF)</div>`
+          : "";
+        box.innerHTML = `<div style="font-size:12px; color:var(--muted); text-align:center;">Cart-ல் பொருட்கள் இல்லை (Refresh Cart அழுத்தவும்).${couponHint}</div>`;
         return;
       }
+
+      const discountHtml = (snapshotCoupon && snapshotDiscount > 0)
+        ? `
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:var(--muted); margin-top:8px; padding-top:6px; border-top:1px solid var(--border);">
+            <span>Subtotal</span>
+            <span>₹${snapshotBaseTotal}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#ea580c; margin-top:4px;">
+            <span>🏷️ Coupon (${snapshotCoupon.couponCode} - ${snapshotCoupon.discountPercentage}% OFF${snapshotCoupon.influencerName ? ` • ${snapshotCoupon.influencerName}` : ""})</span>
+            <span>-₹${snapshotDiscount}</span>
+          </div>
+        `
+        : "";
 
       box.innerHTML = snapshotItems.map((it) => `
         <div class="snap-item">
@@ -541,7 +611,7 @@
           </div>
           <div class="snap-price">₹${(Number(it.quantity) || 1) * (Number(it.price) || 0)}</div>
         </div>
-      `).join("") + `
+      `).join("") + discountHtml + `
         <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:800; margin-top:8px; padding-top:6px; border-top:1px solid var(--border);">
           <span>Total Amount</span>
           <span style="color:var(--success);">₹${snapshotTotal}</span>
@@ -558,7 +628,10 @@
         document.getElementById("customerSelect").value = "";
         document.getElementById("orderIdField").value = generateNextOrderId();
         snapshotItems = [];
+        snapshotBaseTotal = 0;
+        snapshotDiscount = 0;
         snapshotTotal = 0;
+        snapshotCoupon = null;
         renderSnapshotBox();
       }
     };
@@ -593,11 +666,15 @@
       }
 
       try {
-        await remove(ref(db, `tracking_order/${pendingDeleteUser}`));
+        await Promise.all([
+          remove(ref(db, `tracking_order/${pendingDeleteUser}`)),
+          remove(ref(db, `applied_coupons/${pendingDeleteUser}`))
+        ]);
         delete ordersData[pendingDeleteUser];
+        delete appliedCouponsData[pendingDeleteUser];
         renderOrdersList();
         closeDeleteModal();
-        alert("ஆர்டர் டிராக்கிங் நீக்கப்பட்டுவிட்டது.");
+        alert("ஆர்டர் டிராக்கிங் மற்றும் கூப்பன் விவரம் நீக்கப்பட்டுவிட்டது.");
       } catch (err) {
         console.error(err);
         alert("நீக்கும்போது பிழை ஏற்பட்டது.");
@@ -612,6 +689,7 @@
       }
 
       const user = usersData[username] || {};
+      const existing = ordersData[username] || {};
       const payload = {
         username: username,
         customerName: user.name || username,
@@ -619,11 +697,16 @@
         orderId: document.getElementById("orderIdField").value.trim() || generateNextOrderId(),
         statusStep: Number(document.getElementById("stepField").value) || 1,
         fromLocation: document.getElementById("fromField").value.trim() || "Meadi Aqua Tech, Cuddalore",
-        currentLocation: document.getElementById("currentField").value.trim() || "Processing",
+        currentLocation: existing.currentLocation || "",
         nextLocation: document.getElementById("nextField").value.trim() || user.address || "Customer Address",
         toLocation: user.address || document.getElementById("nextField").value.trim() || "Customer Address",
         expectedDelivery: document.getElementById("etaField").value.trim() || "Soon",
         items: snapshotItems,
+        baseAmount: snapshotBaseTotal || snapshotTotal,
+        discountAmount: snapshotDiscount || 0,
+        couponCode: (snapshotCoupon && snapshotDiscount > 0) ? (snapshotCoupon.couponCode || "") : "",
+        influencerName: (snapshotCoupon && snapshotDiscount > 0) ? (snapshotCoupon.influencerName || "") : "",
+        discountPercentage: (snapshotCoupon && snapshotDiscount > 0) ? (Number(snapshotCoupon.discountPercentage) || 0) : 0,
         totalAmount: snapshotTotal,
         updatedAt: Date.now()
       };
@@ -647,7 +730,7 @@
       const entries = Object.keys(ordersData)
         .map((key) => ({ key, ...ordersData[key] }))
         .filter((o) => {
-          const text = `${o.orderId || ""} ${o.customerName || ""} ${o.username || ""} ${o.phone || ""} ${o.currentLocation || ""}`.toLowerCase();
+          const text = `${o.orderId || ""} ${o.customerName || ""} ${o.username || ""} ${o.phone || ""} ${o.nextLocation || ""}`.toLowerCase();
           return !q || text.includes(q);
         })
         .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -661,6 +744,9 @@
         const items = Array.isArray(o.items) ? o.items : [];
         const imgs = items.slice(0, 4).map((it) => `<img src="${it.image || 'https://via.placeholder.com/80'}" alt="${it.productName}" />`).join("");
         const isDelivered = Number(o.statusStep) === 4;
+        const discountBadge = (o.couponCode && Number(o.discountAmount) > 0)
+          ? `<div class="coupon-pill">🏷️ ${o.couponCode} (-₹${Number(o.discountAmount)} OFF)</div>`
+          : "";
         return `
           <div class="order-card">
             <div class="order-top">
@@ -669,7 +755,8 @@
             </div>
             <div class="cust-name">${o.customerName || o.key}</div>
             <div class="cust-sub">${o.phone || "No Phone"} • ${o.key}</div>
-            <div class="loc-line">📍 <b>Now:</b> ${o.currentLocation || "--"} → <b>Next:</b> ${o.nextLocation || "--"}</div>
+            ${discountBadge}
+            <div class="loc-line">📍 <b>Delivery To:</b> ${o.nextLocation || o.toLocation || "--"}</div>
             <div class="thumb-strip">
               ${imgs}
               <span class="amt-text">₹${Number(o.totalAmount) || 0}</span>
