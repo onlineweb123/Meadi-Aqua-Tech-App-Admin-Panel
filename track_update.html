@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracking Update | Meadi Aqua Tech</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --primary: #0077b6;
+      --primary-dark: #025888;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 100px; }
+
+    header {
+      height: 62px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+    .header-title { font-size: 18px; font-weight: 800; color: var(--primary); }
+
+    .container { max-width: 560px; margin: 0 auto; padding: 16px; }
+
+    .search-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+    }
+    .search-wrap input {
+      width: 100%;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .order-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .order-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .oid-badge {
+      background: #e0f2fe;
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .step-badge {
+      background: #f1f5f9;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .step-badge.delivered {
+      background: #dcfce7;
+      color: var(--success);
+    }
+    .cust-name { font-size: 16px; font-weight: 800; }
+    .cust-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .loc-line { font-size: 13px; color: var(--text); margin-top: 8px; }
+
+    .thumb-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .thumb-strip img {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      background: #f1f5f9;
+    }
+    .amt-text { margin-left: auto; font-size: 15px; font-weight: 800; color: var(--success); }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .edit-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .del-btn {
+      padding: 10px 14px;
+      border: 1px solid #fecaca;
+      background: var(--danger-bg);
+      color: var(--danger);
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .fab-plus {
+      position: fixed;
+      right: 20px;
+      bottom: 22px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      box-shadow: 0 8px 20px rgba(0, 119, 182, 0.35);
+      cursor: pointer;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Modal Form */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 60;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-sheet {
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--card);
+      border-radius: 22px 22px 0 0;
+      padding: 20px 18px 32px;
+    }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-head h2 { font-size: 17px; font-weight: 800; color: var(--primary); }
+    .close-btn {
+      border: none;
+      background: #f1f5f9;
+      color: var(--text);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Delete Confirm Modal */
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 70;
+    }
+    .confirm-backdrop.open { display: flex; }
+    .confirm-box {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      border-radius: 18px;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .confirm-box h3 { font-size: 16px; font-weight: 800; color: var(--danger); margin-bottom: 6px; }
+    .confirm-box p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+    .confirm-error { font-size: 12px; color: var(--danger); font-weight: 700; margin-top: 6px; display: none; }
+    .confirm-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .btn-cancel {
+      flex: 1;
+      padding: 11px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      color: var(--text);
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-confirm-del {
+      flex: 1;
+      padding: 11px;
+      border: none;
+      background: var(--danger);
+      color: #fff;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 12px; margin-bottom: 4px; }
+    input, select {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--primary); }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-refresh { background: #e0f2fe; color: var(--primary-dark); margin-top: 10px; }
+    .btn-save { background: var(--primary); color: #fff; margin-top: 16px; }
+
+    .snap-box {
+      margin-top: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .snap-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+    .snap-item:last-child { border-bottom: none; }
+    .snap-item img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: #e2e8f0; }
+    .snap-info { flex: 1; }
+    .snap-title { font-size: 13px; font-weight: 700; }
+    .snap-sub { font-size: 11px; color: var(--muted); }
+    .snap-price { font-size: 13px; font-weight: 800; color: var(--primary); }
+
+    .empty-msg { text-align: center; color: var(--muted); padding: 40px 16px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-title">Order Tracking Admin</div>
+  </header>
+
+  <div class="container">
+    <div class="search-wrap">
+      <input type="text" id="listSearch" placeholder="🔍 Search Order ID, Name, Phone or Username..." oninput="renderOrdersList()" />
+    </div>
+
+    <div id="ordersList">
+      <div class="empty-msg">Loading orders...</div>
+    </div>
+  </div>
+
+  <button type="button" class="fab-plus" onclick="openFormModal()" title="New / Update Order">+</button>
+
+  <!-- Add / Update Modal -->
+  <div class="modal-backdrop" id="formModal">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h2>Update Order Tracking</h2>
+        <button type="button" class="close-btn" onclick="closeFormModal()">✕</button>
+      </div>
+
+      <label for="modalUserSearch">Search Customer (Name / Phone / Username)</label>
+      <input type="text" id="modalUserSearch" placeholder="Type to filter customer..." oninput="filterCustomerSelect()" />
+
+      <label for="customerSelect">Customer</label>
+      <select id="customerSelect" onchange="onSelectCustomer()"></select>
+
+      <label for="orderIdField">Order ID (Auto Generated)</label>
+      <input type="text" id="orderIdField" readonly />
+
+      <button type="button" class="btn btn-refresh" onclick="refreshCustomerCart()">
+        🔄 Refresh Cart (Load Current Items)
+      </button>
+
+      <div class="snap-box" id="snapBox">
+        <div style="font-size: 12px; color: var(--muted); text-align: center;">Refresh Cart அழுத்தவும்</div>
+      </div>
+
+      <label for="stepField">Delivery Status Step</label>
+      <select id="stepField">
+        <option value="1">1 - Order Confirmed</option>
+        <option value="2">2 - Packed & Dispatched</option>
+        <option value="3">3 - Out for Delivery</option>
+        <option value="4">4 - Delivered & Installed</option>
+      </select>
+
+      <label for="fromField">From (Dispatch Location)</label>
+      <input type="text" id="fromField" value="Meadi Aqua Tech, Cuddalore" />
+
+      <label for="currentField">Current Location (Now)</label>
+      <input type="text" id="currentField" placeholder="e.g., Cuddalore Chavadi" />
+
+      <label for="nextField">Next / Delivery To</label>
+      <input type="text" id="nextField" placeholder="e.g., Kurinjipadi / Customer Address" />
+
+      <label for="etaField">Expected Delivery</label>
+      <input type="text" id="etaField" placeholder="e.g., Tomorrow" />
+
+      <button type="button" class="btn btn-save" onclick="saveOrderTracking()">
+        Save Tracking Update
+      </button>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="confirm-backdrop" id="deleteModal">
+    <div class="confirm-box">
+      <h3>🗑️ Delete Order Tracking</h3>
+      <p id="deleteTargetText">இந்த ஆர்டரை நீக்க Confirm Code-ஐ உள்ளிடவும்.</p>
+      <input type="tel" id="confirmCodeInput" placeholder="Enter Confirm Code" autocomplete="off" />
+      <div class="confirm-error" id="confirmError">❌ Confirm Code தவறாக உள்ளது!</div>
+      <div class="confirm-actions">
+        <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+        <button type="button" class="btn-confirm-del" onclick="confirmDeleteOrder()">Confirm Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, get, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
+      authDomain: "meadi-aqua-tech.firebaseapp.com",
+      databaseURL: "https://meadi-aqua-tech-default-rtdb.firebaseio.com",
+      projectId: "meadi-aqua-tech",
+      storageBucket: "meadi-aqua-tech.firebasestorage.app",
+      messagingSenderId: "531151217708",
+      appId: "1:531151217708:web:b30b6e1a0bf7fa60f29d89"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const DELETE_CONFIRM_CODE = "9344165879";
+    let pendingDeleteUser = "";
+
+    let usersData = {};
+    let ordersData = {};
+    let snapshotItems = [];
+    let snapshotTotal = 0;
+
+    const stepLabels = {
+      1: "1. Confirmed",
+      2: "2. Dispatched",
+      3: "3. Out for Delivery",
+      4: "4. Delivered"
+    };
+
+    async function loadInitialData() {
+      try {
+        const [uSnap, oSnap] = await Promise.all([
+          get(ref(db, "users")),
+          get(ref(db, "tracking_order"))
+        ]);
+        if (uSnap.exists()) usersData = uSnap.val();
+        if (oSnap.exists()) ordersData = oSnap.val();
+
+        filterCustomerSelect();
+        renderOrdersList();
+      } catch (err) {
+        console.error(err);
+        document.getElementById("ordersList").innerHTML = `<div class="empty-msg">தரவுகளை எடுக்க முடியவில்லை.</div>`;
+      }
+    }
+
+    function generateNextOrderId() {
+      let maxNum = 100;
+      Object.values(ordersData).forEach((ord) => {
+        const match = String(ord.orderId || "").match(/(\d+)$/);
+        if (match) {
+          const n = parseInt(match[1], 10);
+          if (n > maxNum) maxNum = n;
+        }
+      });
+      return `ORD-${maxNum + 1}`;
+    }
+
+    window.filterCustomerSelect = function() {
+      const q = (document.getElementById("modalUserSearch").value || "").trim().toLowerCase();
+      const select = document.getElementById("customerSelect");
+      const currentVal = select.value;
+
+      const keys = Object.keys(usersData).sort((a, b) =>
+        (usersData[a].name || a).localeCompare(usersData[b].name || b)
+      );
+
+      select.innerHTML = `<option value="">-- Select Customer --</option>`;
+      keys.forEach((key) => {
+        const u = usersData[key] || {};
+        const label = `${u.name || key} (${key}) • ${u.phone || "No Phone"}`;
+        if (!q || label.toLowerCase().includes(q)) {
+          const opt = document.createElement("option");
+          opt.value = key;
+          opt.textContent = label;
+          select.appendChild(opt);
+        }
+      });
+
+      if (currentVal && usersData[currentVal]) {
+        select.value = currentVal;
+      }
+    };
+
+    window.onSelectCustomer = function() {
+      const username = document.getElementById("customerSelect").value;
+      if (!username) return;
+
+      const user = usersData[username] || {};
+      const existing = ordersData[username];
+
+      if (existing) {
+        document.getElementById("orderIdField").value = existing.orderId || generateNextOrderId();
+        document.getElementById("stepField").value = String(existing.statusStep || 1);
+        document.getElementById("fromField").value = existing.fromLocation || "Meadi Aqua Tech, Cuddalore";
+        document.getElementById("currentField").value = existing.currentLocation || "";
+        document.getElementById("nextField").value = existing.nextLocation || existing.toLocation || user.address || "";
+        document.getElementById("etaField").value = existing.expectedDelivery || "";
+        snapshotItems = Array.isArray(existing.items) ? existing.items : [];
+        snapshotTotal = Number(existing.totalAmount) || 0;
+      } else {
+        document.getElementById("orderIdField").value = generateNextOrderId();
+        document.getElementById("stepField").value = "1";
+        document.getElementById("fromField").value = "Meadi Aqua Tech, Cuddalore";
+        document.getElementById("currentField").value = "Order Confirmed at Store";
+        document.getElementById("nextField").value = user.address || "";
+        document.getElementById("etaField").value = "Soon";
+        snapshotItems = [];
+        snapshotTotal = 0;
+      }
+      renderSnapshotBox();
+    };
+
+    window.refreshCustomerCart = async function() {
+      const username = document.getElementById("customerSelect").value;
+      if (!username) {
+        alert("முதலில் Customer-ஐத் தேர்ந்தெடுக்கவும்.");
+        return;
+      }
+
+      try {
+        const snap = await get(ref(db, `carts/${username}`));
+        snapshotItems = [];
+        snapshotTotal = 0;
+
+        if (snap.exists()) {
+          const cartObj = snap.val();
+          Object.keys(cartObj).forEach((k) => {
+            const item = cartObj[k];
+            const qty = Number(item.quantity) || 1;
+            const price = Number(item.price) || 0;
+            snapshotTotal += qty * price;
+            snapshotItems.push({
+              productName: item.productName || "Item",
+              price: price,
+              quantity: qty,
+              image: item.image || ""
+            });
+          });
+        }
+        renderSnapshotBox();
+      } catch (err) {
+        console.error(err);
+        alert("Cart எடுக்க முடியவில்லை.");
+      }
+    };
+
+    function renderSnapshotBox() {
+      const box = document.getElementById("snapBox");
+      if (!snapshotItems.length) {
+        box.innerHTML = `<div style="font-size:12px; color:var(--muted); text-align:center;">Cart-ல் பொருட்கள் இல்லை (Refresh Cart அழுத்தவும்).</div>`;
+        return;
+      }
+
+      box.innerHTML = snapshotItems.map((it) => `
+        <div class="snap-item">
+          <img src="${it.image || 'https://via.placeholder.com/80'}" alt="${it.productName}" />
+          <div class="snap-info">
+            <div class="snap-title">${it.productName}</div>
+            <div class="snap-sub">Qty: ${it.quantity} × ₹${it.price}</div>
+          </div>
+          <div class="snap-price">₹${(Number(it.quantity) || 1) * (Number(it.price) || 0)}</div>
+        </div>
+      `).join("") + `
+        <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:800; margin-top:8px; padding-top:6px; border-top:1px solid var(--border);">
+          <span>Total Amount</span>
+          <span style="color:var(--success);">₹${snapshotTotal}</span>
+        </div>
+      `;
+    }
+
+    window.openFormModal = function(preselectUsername = "") {
+      document.getElementById("formModal").classList.add("open");
+      if (preselectUsername) {
+        document.getElementById("customerSelect").value = preselectUsername;
+        onSelectCustomer();
+      } else {
+        document.getElementById("customerSelect").value = "";
+        document.getElementById("orderIdField").value = generateNextOrderId();
+        snapshotItems = [];
+        snapshotTotal = 0;
+        renderSnapshotBox();
+      }
+    };
+
+    window.closeFormModal = function() {
+      document.getElementById("formModal").classList.remove("open");
+    };
+
+    window.openDeleteModal = function(username) {
+      pendingDeleteUser = username;
+      const ord = ordersData[username] || {};
+      document.getElementById("deleteTargetText").innerHTML =
+        `<b>${ord.customerName || username}</b> (${ord.orderId || ""}) ஆர்டரை நீக்க Confirm Code-ஐ உள்ளிடவும்.`;
+      document.getElementById("confirmCodeInput").value = "";
+      document.getElementById("confirmError").style.display = "none";
+      document.getElementById("deleteModal").classList.add("open");
+      setTimeout(() => document.getElementById("confirmCodeInput").focus(), 100);
+    };
+
+    window.closeDeleteModal = function() {
+      pendingDeleteUser = "";
+      document.getElementById("deleteModal").classList.remove("open");
+    };
+
+    window.confirmDeleteOrder = async function() {
+      if (!pendingDeleteUser) return;
+
+      const entered = document.getElementById("confirmCodeInput").value.trim();
+      if (entered !== DELETE_CONFIRM_CODE) {
+        document.getElementById("confirmError").style.display = "block";
+        return;
+      }
+
+      try {
+        await remove(ref(db, `tracking_order/${pendingDeleteUser}`));
+        delete ordersData[pendingDeleteUser];
+        renderOrdersList();
+        closeDeleteModal();
+        alert("ஆர்டர் டிராக்கிங் நீக்கப்பட்டுவிட்டது.");
+      } catch (err) {
+        console.error(err);
+        alert("நீக்கும்போது பிழை ஏற்பட்டது.");
+      }
+    };
+
+    window.saveOrderTracking = async function() {
+      const username = document.getElementById("customerSelect").value;
+      if (!username) {
+        alert("Customer-ஐத் தேர்ந்தெடுக்கவும்.");
+        return;
+      }
+
+      const user = usersData[username] || {};
+      const payload = {
+        username: username,
+        customerName: user.name || username,
+        phone: user.phone || "",
+        orderId: document.getElementById("orderIdField").value.trim() || generateNextOrderId(),
+        statusStep: Number(document.getElementById("stepField").value) || 1,
+        fromLocation: document.getElementById("fromField").value.trim() || "Meadi Aqua Tech, Cuddalore",
+        currentLocation: document.getElementById("currentField").value.trim() || "Processing",
+        nextLocation: document.getElementById("nextField").value.trim() || user.address || "Customer Address",
+        toLocation: user.address || document.getElementById("nextField").value.trim() || "Customer Address",
+        expectedDelivery: document.getElementById("etaField").value.trim() || "Soon",
+        items: snapshotItems,
+        totalAmount: snapshotTotal,
+        updatedAt: Date.now()
+      };
+
+      try {
+        await set(ref(db, `tracking_order/${username}`), payload);
+        ordersData[username] = payload;
+        renderOrdersList();
+        closeFormModal();
+        alert("டிராக்கிங் அப்டேட் ஆகிவிட்டது.");
+      } catch (err) {
+        console.error(err);
+        alert("சேமிப்பதில் பிழை ஏற்பட்டது.");
+      }
+    };
+
+    window.renderOrdersList = function() {
+      const q = (document.getElementById("listSearch").value || "").trim().toLowerCase();
+      const listEl = document.getElementById("ordersList");
+
+      const entries = Object.keys(ordersData)
+        .map((key) => ({ key, ...ordersData[key] }))
+        .filter((o) => {
+          const text = `${o.orderId || ""} ${o.customerName || ""} ${o.username || ""} ${o.phone || ""} ${o.currentLocation || ""}`.toLowerCase();
+          return !q || text.includes(q);
+        })
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+      if (!entries.length) {
+        listEl.innerHTML = `<div class="empty-msg">ஆர்டர்கள் எதுவும் இல்லை. கீழே உள்ள <b>+</b> பட்டனை அழுத்தி சேர்க்கவும்.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = entries.map((o) => {
+        const items = Array.isArray(o.items) ? o.items : [];
+        const imgs = items.slice(0, 4).map((it) => `<img src="${it.image || 'https://via.placeholder.com/80'}" alt="${it.productName}" />`).join("");
+        const isDelivered = Number(o.statusStep) === 4;
+        return `
+          <div class="order-card">
+            <div class="order-top">
+              <span class="oid-badge">${o.orderId || "--"}</span>
+              <span class="step-badge ${isDelivered ? "delivered" : ""}">${stepLabels[o.statusStep] || "1. Confirmed"}</span>
+            </div>
+            <div class="cust-name">${o.customerName || o.key}</div>
+            <div class="cust-sub">${o.phone || "No Phone"} • ${o.key}</div>
+            <div class="loc-line">📍 <b>Now:</b> ${o.currentLocation || "--"} → <b>Next:</b> ${o.nextLocation || "--"}</div>
+            <div class="thumb-strip">
+              ${imgs}
+              <span class="amt-text">₹${Number(o.totalAmount) || 0}</span>
+            </div>
+            <div class="card-actions">
+              <button type="button" class="edit-btn" onclick="openFormModal('${o.key}')">✏️ Edit / Update Status</button>
+              <button type="button" class="del-btn" onclick="openDeleteModal('${o.key}')">🗑️ Delete</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    };
+
+    loadInitialData();
+  </script>
+</body>
+</html>
