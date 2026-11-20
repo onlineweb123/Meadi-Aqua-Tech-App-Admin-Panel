@@ -41,7 +41,7 @@
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 10px 14px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
     .search-wrap input {
       width: 100%;
@@ -50,6 +50,71 @@
       font-size: 14px;
       background: transparent;
       color: var(--text);
+    }
+
+    /* Filter Tabs Bar */
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-tabs::-webkit-scrollbar { display: none; }
+    .filter-tab {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 8px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .filter-tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 119, 182, 0.25);
+    }
+
+    /* Spinner Animation */
+    .spinner {
+      width: 15px;
+      height: 15px;
+      border: 2.5px solid rgba(255, 255, 255, 0.35);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      display: inline-block;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner-dark {
+      width: 15px;
+      height: 15px;
+      border: 2.5px solid rgba(0, 119, 182, 0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      display: inline-block;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner-lg {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(0, 119, 182, 0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .order-card {
@@ -143,6 +208,51 @@
       border-radius: 10px;
       cursor: pointer;
       white-space: nowrap;
+    }
+
+    /* Quick Inline Status Update Bar */
+    .quick-status-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+      align-items: center;
+    }
+    .quick-status-row select {
+      flex: 1;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      background: #f8fafc;
+      color: var(--text);
+      outline: none;
+    }
+    .quick-status-row select:focus {
+      border-color: var(--primary);
+      background: #fff;
+    }
+    .quick-save-btn {
+      padding: 9px 16px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+      font-size: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .quick-save-btn:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
     }
 
     .fab-plus {
@@ -249,6 +359,14 @@
       font-weight: 700;
       font-size: 13px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-confirm-del:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
     }
 
     label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 12px; margin-bottom: 4px; }
@@ -276,6 +394,10 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
+    }
+    .btn:disabled {
+      opacity: 0.75;
+      cursor: not-allowed;
     }
     .btn-refresh { background: #e0f2fe; color: var(--primary-dark); margin-top: 10px; }
     .btn-save { background: var(--primary); color: #fff; margin-top: 16px; }
@@ -306,7 +428,7 @@
 </head>
 <body>
   <header>
-    <div class="header-title">Order Tracking Admin</div>
+    <div class="header-title">Order Tracking</div>
   </header>
 
   <div class="container">
@@ -314,8 +436,19 @@
       <input type="text" id="listSearch" placeholder="🔍 Search Order ID, Name, Phone or Username..." oninput="renderOrdersList()" />
     </div>
 
+    <!-- Status Filter Tabs (CONFIRMED shows all orders) -->
+    <div class="filter-tabs" id="filterTabs">
+      <button type="button" class="filter-tab active" data-step="1" onclick="setFilterTab('1', this)">CONFIRMED</button>
+      <button type="button" class="filter-tab" data-step="2" onclick="setFilterTab('2', this)">DISPATCHED</button>
+      <button type="button" class="filter-tab" data-step="3" onclick="setFilterTab('3', this)">OUT FOR DELIVERY</button>
+      <button type="button" class="filter-tab" data-step="4" onclick="setFilterTab('4', this)">DELIVERED</button>
+    </div>
+
     <div id="ordersList">
-      <div class="empty-msg">Loading orders...</div>
+      <div class="empty-msg">
+        <div class="spinner-lg"></div>
+        Loading orders...
+      </div>
     </div>
   </div>
 
@@ -338,12 +471,12 @@
       <label for="orderIdField">Order ID (Auto Generated)</label>
       <input type="text" id="orderIdField" readonly />
 
-      <button type="button" class="btn btn-refresh" onclick="refreshCustomerCart()">
+      <button type="button" class="btn btn-refresh" id="refreshCartBtn" onclick="refreshCustomerCart()">
         🔄 Refresh Cart (Load Current Items)
       </button>
 
       <div class="snap-box" id="snapBox">
-        <div style="font-size: 12px; color: var(--muted); text-align: center;">Refresh Cart அழுத்தவும்</div>
+        <div style="font-size: 12px; color: var(--muted); text-align: center;">Click Refresh Cart to load items</div>
       </div>
 
       <label for="stepField">Delivery Status Step</label>
@@ -351,7 +484,7 @@
         <option value="1">1 - Order Confirmed</option>
         <option value="2">2 - Packed & Dispatched</option>
         <option value="3">3 - Out for Delivery</option>
-        <option value="4">4 - Delivered & Installed</option>
+        <option value="4">4 - Delivered</option>
       </select>
 
       <label for="fromField">From (Dispatch Location)</label>
@@ -363,7 +496,7 @@
       <label for="etaField">Expected Delivery</label>
       <input type="text" id="etaField" placeholder="e.g., Tomorrow" />
 
-      <button type="button" class="btn btn-save" onclick="saveOrderTracking()">
+      <button type="button" class="btn btn-save" id="mainSaveBtn" onclick="saveOrderTracking()">
         Save Tracking Update
       </button>
     </div>
@@ -373,19 +506,19 @@
   <div class="confirm-backdrop" id="deleteModal">
     <div class="confirm-box">
       <h3>🗑️ Delete Order Tracking</h3>
-      <p id="deleteTargetText">இந்த ஆர்டரை நீக்க Confirm Code-ஐ உள்ளிடவும்.</p>
+      <p id="deleteTargetText">Enter the Confirm Code to delete this order.</p>
       <input type="tel" id="confirmCodeInput" placeholder="Enter Confirm Code" autocomplete="off" />
-      <div class="confirm-error" id="confirmError">❌ Confirm Code தவறாக உள்ளது!</div>
+      <div class="confirm-error" id="confirmError">❌ Invalid Confirm Code!</div>
       <div class="confirm-actions">
         <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
-        <button type="button" class="btn-confirm-del" onclick="confirmDeleteOrder()">Confirm Delete</button>
+        <button type="button" class="btn-confirm-del" id="confirmDeleteBtn" onclick="confirmDeleteOrder()">Confirm Delete</button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, get, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, get, set, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAqyyGJt_t0ztknMudFVLmo6relkEa284g",
@@ -402,6 +535,7 @@
 
     const DELETE_CONFIRM_CODE = "9344165879";
     let pendingDeleteUser = "";
+    let activeFilterStep = "1";
 
     let usersData = {};
     let ordersData = {};
@@ -419,6 +553,13 @@
       4: "4. Delivered"
     };
 
+    window.setFilterTab = function(step, btnEl) {
+      activeFilterStep = step;
+      document.querySelectorAll("#filterTabs .filter-tab").forEach((b) => b.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+      renderOrdersList();
+    };
+
     async function loadInitialData() {
       try {
         const [uSnap, oSnap, cSnap] = await Promise.all([
@@ -434,7 +575,7 @@
         renderOrdersList();
       } catch (err) {
         console.error(err);
-        document.getElementById("ordersList").innerHTML = `<div class="empty-msg">தரவுகளை எடுக்க முடியவில்லை.</div>`;
+        document.getElementById("ordersList").innerHTML = `<div class="empty-msg">Failed to load data.</div>`;
       }
     }
 
@@ -519,9 +660,13 @@
     window.refreshCustomerCart = async function() {
       const username = document.getElementById("customerSelect").value;
       if (!username) {
-        alert("முதலில் Customer-ஐத் தேர்ந்தெடுக்கவும்.");
+        alert("Please select a customer first.");
         return;
       }
+
+      const refreshBtn = document.getElementById("refreshCartBtn");
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = `<span class="spinner-dark"></span> Loading Cart...`;
 
       try {
         const [snap, couponSnap] = await Promise.all([
@@ -575,7 +720,10 @@
         renderSnapshotBox();
       } catch (err) {
         console.error(err);
-        alert("Cart எடுக்க முடியவில்லை.");
+        alert("Failed to load cart.");
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = `🔄 Refresh Cart (Load Current Items)`;
       }
     };
 
@@ -585,7 +733,7 @@
         const couponHint = snapshotCoupon
           ? `<div style="font-size:11px; color:#ea580c; font-weight:700; margin-top:4px;">🏷️ Coupon Saved: ${snapshotCoupon.couponCode} (${snapshotCoupon.discountPercentage}% OFF)</div>`
           : "";
-        box.innerHTML = `<div style="font-size:12px; color:var(--muted); text-align:center;">Cart-ல் பொருட்கள் இல்லை (Refresh Cart அழுத்தவும்).${couponHint}</div>`;
+        box.innerHTML = `<div style="font-size:12px; color:var(--muted); text-align:center;">No items in cart (Click Refresh Cart).${couponHint}</div>`;
         return;
       }
 
@@ -644,7 +792,7 @@
       pendingDeleteUser = username;
       const ord = ordersData[username] || {};
       document.getElementById("deleteTargetText").innerHTML =
-        `<b>${ord.customerName || username}</b> (${ord.orderId || ""}) ஆர்டரை நீக்க Confirm Code-ஐ உள்ளிடவும்.`;
+        `Enter Confirm Code to delete order for <b>${ord.customerName || username}</b> (${ord.orderId || ""}).`;
       document.getElementById("confirmCodeInput").value = "";
       document.getElementById("confirmError").style.display = "none";
       document.getElementById("deleteModal").classList.add("open");
@@ -665,6 +813,10 @@
         return;
       }
 
+      const delBtn = document.getElementById("confirmDeleteBtn");
+      delBtn.disabled = true;
+      delBtn.innerHTML = `<span class="spinner"></span> Deleting...`;
+
       try {
         await Promise.all([
           remove(ref(db, `tracking_order/${pendingDeleteUser}`)),
@@ -674,19 +826,56 @@
         delete appliedCouponsData[pendingDeleteUser];
         renderOrdersList();
         closeDeleteModal();
-        alert("ஆர்டர் டிராக்கிங் மற்றும் கூப்பன் விவரம் நீக்கப்பட்டுவிட்டது.");
+        alert("Order tracking and coupon details deleted successfully.");
       } catch (err) {
         console.error(err);
-        alert("நீக்கும்போது பிழை ஏற்பட்டது.");
+        alert("Error deleting order.");
+      } finally {
+        delBtn.disabled = false;
+        delBtn.textContent = "Confirm Delete";
+      }
+    };
+
+    window.quickSaveStatus = async function(username, btnEl) {
+      const selectEl = document.getElementById(`quickStep_${username}`);
+      if (!selectEl || !ordersData[username]) return;
+
+      const newStep = Number(selectEl.value) || 1;
+      const now = Date.now();
+
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = `<span class="spinner"></span> SAVING`;
+      }
+
+      try {
+        await update(ref(db, `tracking_order/${username}`), {
+          statusStep: newStep,
+          updatedAt: now
+        });
+        ordersData[username].statusStep = newStep;
+        ordersData[username].updatedAt = now;
+        renderOrdersList();
+      } catch (err) {
+        console.error(err);
+        alert("Error saving status.");
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = "SAVE";
+        }
       }
     };
 
     window.saveOrderTracking = async function() {
       const username = document.getElementById("customerSelect").value;
       if (!username) {
-        alert("Customer-ஐத் தேர்ந்தெடுக்கவும்.");
+        alert("Please select a customer.");
         return;
       }
+
+      const saveBtn = document.getElementById("mainSaveBtn");
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<span class="spinner"></span> Saving Update...`;
 
       const user = usersData[username] || {};
       const existing = ordersData[username] || {};
@@ -716,10 +905,13 @@
         ordersData[username] = payload;
         renderOrdersList();
         closeFormModal();
-        alert("டிராக்கிங் அப்டேட் ஆகிவிட்டது.");
+        alert("Tracking updated successfully.");
       } catch (err) {
         console.error(err);
-        alert("சேமிப்பதில் பிழை ஏற்பட்டது.");
+        alert("Error saving tracking update.");
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Tracking Update";
       }
     };
 
@@ -730,20 +922,22 @@
       const entries = Object.keys(ordersData)
         .map((key) => ({ key, ...ordersData[key] }))
         .filter((o) => {
+          const stepMatch = activeFilterStep === "1" || String(o.statusStep || 1) === activeFilterStep;
           const text = `${o.orderId || ""} ${o.customerName || ""} ${o.username || ""} ${o.phone || ""} ${o.nextLocation || ""}`.toLowerCase();
-          return !q || text.includes(q);
+          return stepMatch && (!q || text.includes(q));
         })
         .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
       if (!entries.length) {
-        listEl.innerHTML = `<div class="empty-msg">ஆர்டர்கள் எதுவும் இல்லை. கீழே உள்ள <b>+</b> பட்டனை அழுத்தி சேர்க்கவும்.</div>`;
+        listEl.innerHTML = `<div class="empty-msg">No orders found in this section</div>`;
         return;
       }
 
       listEl.innerHTML = entries.map((o) => {
         const items = Array.isArray(o.items) ? o.items : [];
         const imgs = items.slice(0, 4).map((it) => `<img src="${it.image || 'https://via.placeholder.com/80'}" alt="${it.productName}" />`).join("");
-        const isDelivered = Number(o.statusStep) === 4;
+        const currentStep = Number(o.statusStep) || 1;
+        const isDelivered = currentStep === 4;
         const discountBadge = (o.couponCode && Number(o.discountAmount) > 0)
           ? `<div class="coupon-pill">🏷️ ${o.couponCode} (-₹${Number(o.discountAmount)} OFF)</div>`
           : "";
@@ -751,7 +945,7 @@
           <div class="order-card">
             <div class="order-top">
               <span class="oid-badge">${o.orderId || "--"}</span>
-              <span class="step-badge ${isDelivered ? "delivered" : ""}">${stepLabels[o.statusStep] || "1. Confirmed"}</span>
+              <span class="step-badge ${isDelivered ? "delivered" : ""}">${stepLabels[currentStep] || "1. Confirmed"}</span>
             </div>
             <div class="cust-name">${o.customerName || o.key}</div>
             <div class="cust-sub">${o.phone || "No Phone"} • ${o.key}</div>
@@ -764,6 +958,15 @@
             <div class="card-actions">
               <button type="button" class="edit-btn" onclick="openFormModal('${o.key}')">✏️ Edit / Update Status</button>
               <button type="button" class="del-btn" onclick="openDeleteModal('${o.key}')">🗑️ Delete</button>
+            </div>
+            <div class="quick-status-row">
+              <select id="quickStep_${o.key}" aria-label="Quick Delivery Status">
+                <option value="1" ${currentStep === 1 ? "selected" : ""}>1 - Order Confirmed</option>
+                <option value="2" ${currentStep === 2 ? "selected" : ""}>2 - Packed & Dispatched</option>
+                <option value="3" ${currentStep === 3 ? "selected" : ""}>3 - Out for Delivery</option>
+                <option value="4" ${currentStep === 4 ? "selected" : ""}>4 - Delivered</option>
+              </select>
+              <button type="button" class="quick-save-btn" onclick="quickSaveStatus('${o.key}', this)">SAVE</button>
             </div>
           </div>
         `;
